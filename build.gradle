@@ -10,6 +10,7 @@ version = '1.0.0'
 
 application {
     mainClass = 'edu.mcw.scge.ClinicalTrialsUpdatePipeline'
+    applicationName = 'clinical-trials-rag-load-pipeline'
 }
 
 java {

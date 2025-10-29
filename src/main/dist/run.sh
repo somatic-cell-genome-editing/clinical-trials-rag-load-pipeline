@@ -12,7 +12,7 @@ EMAIL_LIST="akundurthi@mcw.edu"
 
 # Additional email for production server
 if [ "$SERVER" = "LEETA" ]; then
-  EMAIL_LIST="$EMAIL_LIST rgddata@travis.rgd.mcw.edu"
+  EMAIL_LIST="$EMAIL_LIST"
 fi
 
 cd $APPDIR
