@@ -16,19 +16,20 @@ if [ "$SERVER" = "LEETA" ]; then
 fi
 
 cd $APPDIR
-
-# Create logs directory if it doesn't exist
-mkdir -p $APPDIR/logs
+pwd
 
 # Database configuration from default_db.xml
 DB_OPTS="-Dspring.config=/data/pipelines/properties/default_db.xml"
+LOG4J_OPTS="-Dlogging.config=file://$APPDIR/properties/log4j2.xml -Dlog.dir=$APPDIR/logs"
+export CLINICAL_TRIALS_RAG_PIPELINE_OPTS="$DB_OPTS $LOG4J_OPTS"
 
-# Run the pipeline
-java $DB_OPTS \
-    -Dspring.config.location=file:$APPDIR/properties/application.properties \
-    -Dlogging.config=file:$APPDIR/properties/log4j2.xml \
-    -Dlog.dir=$APPDIR/logs \
-    -jar lib/$APPNAME.jar "$@" > run.log 2>&1
+# Run the pipeline using bin script (created by Gradle application plugin)
+bin/$APPNAME "$@" | tee run.log
 
-# Send email notification with log file
-mailx -s "[$SERVER] Clinical Trials RAG Load Pipeline Run" $EMAIL_LIST < $APPDIR/logs/status.log
+# Send email notification with log files
+if [ -f "$APPDIR/logs/status.log" ]; then
+  (echo "=== Status Log ===" && cat $APPDIR/logs/status.log && echo -e "\n\n=== Run Log ===" && cat run.log) | \
+    mailx -s "[$SERVER] Clinical Trials RAG Load Pipeline Run" $EMAIL_LIST
+else
+  mailx -s "[$SERVER] Clinical Trials RAG Load Pipeline Run" $EMAIL_LIST < run.log
+fi
