@@ -19,7 +19,7 @@ cd $APPDIR
 pwd
 
 # Database configuration from default_db.xml
-DB_OPTS="-DSPRING_CONFIG=/data/pipelines/properties/default_db.xml"
+DB_OPTS="-Dspring.config=/data/pipelines/properties/default_db.xml"
 LOG4J_OPTS="-Dlogging.config=file://$APPDIR/properties/log4j2.xml -Dlog.dir=$APPDIR/logs"
 export CLINICAL_TRIALS_RAG_LOAD_PIPELINE_OPTS="$DB_OPTS $LOG4J_OPTS"
 

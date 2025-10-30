@@ -17,11 +17,6 @@ public class ClinicalTrialsUpdatePipeline implements CommandLineRunner {
     private UrlController urlController;
 
     public static void main(String[] args) {
-        // Debug: Print SPRING_CONFIG system property BEFORE Spring Boot starts
-        String springConfig = System.getProperty("SPRING_CONFIG");
-        System.out.println("DEBUG - SPRING_CONFIG at startup: " + springConfig);
-        System.out.println("DEBUG - All JVM args: " + java.lang.management.ManagementFactory.getRuntimeMXBean().getInputArguments());
-
         LOG.info("=== Clinical Trials Update Pipeline Starting ===");
         SpringApplication app = new SpringApplication(ClinicalTrialsUpdatePipeline.class);
         app.setWebApplicationType(WebApplicationType.NONE);  // NOT a web application!
