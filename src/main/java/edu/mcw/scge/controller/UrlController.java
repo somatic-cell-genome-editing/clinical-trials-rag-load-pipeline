@@ -46,7 +46,7 @@ public class UrlController {
             // Get NCT IDs from scgeplatformcur database
             DataSource curationDS = DataSourceFactory.getInstance().getScgePlatformCurDataSource();
             ClinicalTrailDAO dao = new ClinicalTrailDAO(curationDS);
-            List<String> nctIds = dao.getAllNctIds();
+            List<String> nctIds = dao.getNctIdsByRecordStatus("Active");
             LOG.info("Retrieved {} NCT IDs from scgeplatformcur database", nctIds.size());
 
             List<String> processed = new ArrayList<>();
