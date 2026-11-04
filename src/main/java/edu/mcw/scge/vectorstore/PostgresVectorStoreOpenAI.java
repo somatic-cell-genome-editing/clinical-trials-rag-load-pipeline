@@ -42,6 +42,8 @@ public class PostgresVectorStoreOpenAI implements VectorStore {
                 docEmbedding.setEmbedding(new PGvector(embedding));
                 docEmbedding.setFileName(doc.getMetadata().getOrDefault("filename", "unknown").toString());
                 docEmbedding.setCreatedAt(LocalDateTime.now());
+                Object contentHash = doc.getMetadata().get("content_hash");
+                docEmbedding.setContentHash(contentHash != null ? contentHash.toString() : null);
 
                 repository.save(docEmbedding);
                 LOG.debug("Saved document chunk: {} characters from {}",

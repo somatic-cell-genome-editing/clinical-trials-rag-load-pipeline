@@ -1,6 +1,9 @@
 package edu.mcw.scge.controller;
 
+import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.reader.UrlDocumentReader;
+import edu.mcw.scge.service.ActiveTrialSummaryBuilder;
+import edu.mcw.scge.service.ChunkLabeler;
 import edu.mcw.scge.service.DocumentPreprocessor;
 import edu.mcw.scge.repository.DocumentEmbeddingOpenAIRepository;
 import edu.mcw.scge.model.DocumentEmbeddingOpenAI;
@@ -12,35 +15,49 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 @Component
 public class UrlController {
     private static final Logger LOG = LoggerFactory.getLogger(UrlController.class);
+    private static final String TRIAL_FILE_PREFIX = "CLINICAL TRIAL: ";
 
     private final VectorStore openaiVectorStore;
     private final DocumentPreprocessor preprocessor;
     private final DocumentEmbeddingOpenAIRepository repository;
+    private final String embeddingModelName;
+    private final String embeddingDimensions;
 
     public UrlController(@Qualifier("openaiVectorStore") VectorStore openaiVectorStore,
                          DocumentPreprocessor preprocessor,
-                         DocumentEmbeddingOpenAIRepository repository){
+                         DocumentEmbeddingOpenAIRepository repository,
+                         @Value("${spring.ai.openai.embedding.options.model:text-embedding-ada-002}") String embeddingModelName,
+                         @Value("${spring.ai.openai.embedding.options.dimensions:}") String embeddingDimensions){
         this.openaiVectorStore = openaiVectorStore;
         this.preprocessor = preprocessor;
         this.repository = repository;
+        this.embeddingModelName = embeddingModelName;
+        this.embeddingDimensions = embeddingDimensions;
     }
 
     public void loadClinicalTrials() {
-        LOG.info("Starting clinical trials loading process");
+        LOG.info("Starting clinical trials loading process (embedding model: {})", embeddingModelName);
 
         try {
             // Get NCT IDs from scgeplatformcur database
@@ -49,57 +66,53 @@ public class UrlController {
             List<String> nctIds = dao.getNctIdsByRecordStatus("Active");
             LOG.info("Retrieved {} NCT IDs from scgeplatformcur database", nctIds.size());
 
-            List<String> processed = new ArrayList<>();
-            List<String> failed = new ArrayList<>();
-            List<String> overwritten = new ArrayList<>();
-
+            Set<String> activeIds = new TreeSet<>();
             for (String nctId : nctIds) {
+                if (nctId == null || nctId.trim().isEmpty()) {
+                    LOG.warn("Skipping empty nctId");
+                    continue;
+                }
+                activeIds.add(nctId.trim());
+            }
+
+            List<String> added = new ArrayList<>();
+            List<String> updated = new ArrayList<>();
+            List<String> unchanged = new ArrayList<>();
+            List<String> failed = new ArrayList<>();
+
+            for (String nctId : activeIds) {
                 try {
-                    if (nctId == null || nctId.trim().isEmpty()) {
-                        LOG.warn("Skipping empty nctId");
+                    String url = "https://scge.mcw.edu/platform/data/report/clinicalTrials/" + nctId;
+                    LOG.info("Processing trial: {}", nctId);
+
+                    List<Document> chunks = buildChunks(url);
+                    if (chunks == null) {
+                        failed.add(nctId);
+                        LOG.error("Failed to process trial: {} (existing entries kept)", nctId);
                         continue;
                     }
 
-                    nctId = nctId.trim();
-                    String url = "https://scge.mcw.edu/platform/data/report/clinicalTrials/" + nctId;
-
-                    LOG.info("Processing trial: {}", nctId);
-
-                    // Check if already exists in vector store
-                    List<DocumentEmbeddingOpenAI> existing = repository.findByFileName("CLINICAL TRIAL: " + nctId);
-                    boolean isOverwrite = !existing.isEmpty();
-
-                    // If exists, delete existing entries first
-                    if (isOverwrite) {
-                        for (DocumentEmbeddingOpenAI doc : existing) {
-                            repository.delete(doc);
-                        }
-                        LOG.info("Deleted {} existing entries for trial: {}", existing.size(), nctId);
-                        overwritten.add(nctId);
-                    }
-
-                    boolean success = processUrlInternal(url);
-
-                    if (success) {
-                        processed.add(nctId);
-                        LOG.info("Successfully processed trial: {} ({})", nctId, isOverwrite ? "overwritten" : "new");
-                    } else {
-                        failed.add(nctId);
-                        LOG.error("Failed to process trial: {}", nctId);
+                    switch (replaceSource(TRIAL_FILE_PREFIX + nctId, chunks)) {
+                        case ADDED -> added.add(nctId);
+                        case UPDATED -> updated.add(nctId);
+                        case UNCHANGED -> unchanged.add(nctId);
                     }
 
                 } catch (Exception e) {
-                    String safeNctId = nctId != null ? nctId.trim() : "unknown";
-                    failed.add(safeNctId);
-                    LOG.error("Exception processing trial: {}", safeNctId, e);
+                    failed.add(nctId);
+                    LOG.error("Exception processing trial: {} (existing entries kept)", nctId, e);
                 }
             }
 
-            LOG.info("Clinical trials processing complete. Total: {}, Processed: {}, Overwritten: {}, Failed: {}",
-                    nctIds.size(), processed.size(), overwritten.size(), failed.size());
-            LOG.info("Processed trials: {}", processed);
-            LOG.info("Overwritten trials: {}", overwritten);
+            List<String> removed = removeInactiveTrials(activeIds);
+            loadActiveTrialSummary(dao, activeIds);
+
+            LOG.info("Clinical trials processing complete. Active: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed (no longer Active): {}",
+                    activeIds.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
+            LOG.info("Added trials: {}", added);
+            LOG.info("Updated trials: {}", updated);
             LOG.info("Failed trials: {}", failed);
+            LOG.info("Removed trials: {}", removed);
 
         } catch (Exception e) {
             LOG.error("Error during clinical trials loading", e);
@@ -107,7 +120,12 @@ public class UrlController {
         }
     }
 
-    private boolean processUrlInternal(String urlString) {
+    private enum LoadResult { ADDED, UPDATED, UNCHANGED }
+
+    /**
+     * Fetch a page and turn it into labeled chunks. Returns null if the page could not be read.
+     */
+    private List<Document> buildChunks(String urlString) {
         try {
             // Fetch content from URL
             UrlDocumentReader documentReader = new UrlDocumentReader(urlString);
@@ -115,7 +133,7 @@ public class UrlController {
 
             if (documents.isEmpty()) {
                 LOG.error("Failed to fetch content from URL: {}", urlString);
-                return false;
+                return null;
             }
 
             // Fix the metadata issue - add filename by creating new documents with mutable metadata
@@ -127,38 +145,157 @@ public class UrlController {
                     })
                     .collect(Collectors.toList());
 
-            documents = documentsWithFilename;
-
-            // STEP 1: Universal preprocessing for ANY document type
-            List<Document> preprocessedDocs = preprocessor.preprocessDocuments(documents);
-            LOG.debug("Preprocessed into {} clean documents", preprocessedDocs.size());
-
-            if (preprocessedDocs.isEmpty()) {
-                LOG.error("No usable content after preprocessing");
-                throw new RuntimeException("Document preprocessing failed - no usable content found");
-            }
-
-            // STEP 2: Split into chunks with correct Spring AI settings
-            TokenTextSplitter splitter = TokenTextSplitter.builder()
-                    .withChunkSize(800)                // Target chunk size in tokens
-                    .withMinChunkSizeChars(200)        // Minimum characters per chunk
-                    .withMinChunkLengthToEmbed(50)     // Minimum length to embed
-                    .withMaxNumChunks(10000)           // Maximum number of chunks
-                    .withKeepSeparator(true)           // Keep separators for readability
-                    .build();
-
-            List<Document> splitDocuments = splitter.apply(preprocessedDocs);
-            LOG.debug("Split into {} chunks after preprocessing", splitDocuments.size());
-
-            // Add to OpenAI vector store
-            openaiVectorStore.add(splitDocuments);
-            LOG.debug("Successfully added {} URL chunks to OpenAI vector store", splitDocuments.size());
-
-            return true;
+            return splitAndLabel(documentsWithFilename);
 
         } catch (Exception e) {
             LOG.error("Error processing URL: {}", urlString, e);
-            return false;
+            return null;
+        }
+    }
+
+    private List<Document> splitAndLabel(List<Document> documents) {
+        // STEP 1: Universal preprocessing for ANY document type
+        List<Document> preprocessedDocs = preprocessor.preprocessDocuments(documents);
+        LOG.debug("Preprocessed into {} clean documents", preprocessedDocs.size());
+
+        if (preprocessedDocs.isEmpty()) {
+            LOG.error("No usable content after preprocessing");
+            throw new RuntimeException("Document preprocessing failed - no usable content found");
+        }
+
+        // STEP 2: Split into chunks with correct Spring AI settings
+        TokenTextSplitter splitter = TokenTextSplitter.builder()
+                .withChunkSize(800)                // Target chunk size in tokens
+                .withMinChunkSizeChars(200)        // Minimum characters per chunk
+                .withMinChunkLengthToEmbed(50)     // Minimum length to embed
+                .withMaxNumChunks(10000)           // Maximum number of chunks
+                .withKeepSeparator(true)           // Keep separators for readability
+                .build();
+
+        // STEP 3: Prefix every chunk with its source so later chunks still name the trial
+        List<Document> chunks = ChunkLabeler.applyLabels(splitter.apply(ChunkLabeler.addLabels(preprocessedDocs)));
+        LOG.debug("Split into {} chunks after preprocessing", chunks.size());
+        return chunks;
+    }
+
+    /**
+     * Store the chunks for one source. Nothing is embedded if the stored chunks have the same
+     * content hash. New rows are saved before the old ones are deleted, so a failure keeps the
+     * previous version instead of leaving the source missing.
+     */
+    private LoadResult replaceSource(String fileName, List<Document> chunks) {
+        List<DocumentEmbeddingOpenAI> existing = repository.findByFileName(fileName);
+        String hash = contentHash(chunks);
+
+        if (!existing.isEmpty() && existing.stream().allMatch(e -> hash.equals(e.getContentHash()))) {
+            LOG.info("Unchanged, not re-embedded: {}", fileName);
+            return LoadResult.UNCHANGED;
+        }
+
+        Set<Long> oldIds = existing.stream().map(DocumentEmbeddingOpenAI::getId).collect(Collectors.toSet());
+        List<Document> hashedChunks = chunks.stream()
+                .map(chunk -> {
+                    Map<String, Object> metadata = new HashMap<>(chunk.getMetadata());
+                    metadata.put("filename", fileName);
+                    metadata.put("content_hash", hash);
+                    return new Document(chunk.getContent(), metadata);
+                })
+                .collect(Collectors.toList());
+
+        try {
+            openaiVectorStore.add(hashedChunks);
+        } catch (RuntimeException e) {
+            // Remove any partially saved new rows; the previous version stays in place
+            List<DocumentEmbeddingOpenAI> partial = repository.findByFileName(fileName).stream()
+                    .filter(d -> !oldIds.contains(d.getId()))
+                    .collect(Collectors.toList());
+            repository.deleteAll(partial);
+            throw e;
+        }
+
+        repository.deleteAll(existing);
+        LOG.info("{} {} ({} chunks)", existing.isEmpty() ? "Added" : "Updated", fileName, hashedChunks.size());
+        return existing.isEmpty() ? LoadResult.ADDED : LoadResult.UPDATED;
+    }
+
+    /**
+     * SHA-256 of the embedding model and the chunk texts, so a model change also forces re-embedding.
+     */
+    private String contentHash(List<Document> chunks) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            digest.update((embeddingModelName + "|" + embeddingDimensions + "\n").getBytes(StandardCharsets.UTF_8));
+            for (Document chunk : chunks) {
+                digest.update(chunk.getContent().getBytes(StandardCharsets.UTF_8));
+                digest.update((byte) 0);
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    /**
+     * Delete stored trials that are no longer Active (only Active trials belong in the chatbot).
+     */
+    private List<String> removeInactiveTrials(Set<String> activeIds) {
+        List<String> removed = new ArrayList<>();
+        if (activeIds.isEmpty()) {
+            LOG.warn("No Active trials returned - skipping removal of inactive trials");
+            return removed;
+        }
+
+        for (String fileName : repository.findDistinctFileNames()) {
+            if (fileName == null || !fileName.startsWith(TRIAL_FILE_PREFIX)) {
+                continue;
+            }
+            String nctId = fileName.substring(TRIAL_FILE_PREFIX.length()).trim();
+            if (!activeIds.contains(nctId)) {
+                List<DocumentEmbeddingOpenAI> rows = repository.findByFileName(fileName);
+                repository.deleteAll(rows);
+                removed.add(nctId);
+                LOG.info("Removed trial no longer Active: {} ({} chunks)", nctId, rows.size());
+            }
+        }
+        return removed;
+    }
+
+    /**
+     * Load the Active trial summary documents and remove summary documents no longer generated.
+     */
+    private void loadActiveTrialSummary(ClinicalTrailDAO dao, Set<String> activeIds) {
+        try {
+            List<ClinicalTrialRecord> activeTrials = dao.getAllClinicalTrailRecords().stream()
+                    .filter(r -> r.getNctId() != null && activeIds.contains(r.getNctId().trim()))
+                    .collect(Collectors.toList());
+
+            Map<String, String> summaries = ActiveTrialSummaryBuilder.build(activeTrials);
+            LOG.info("Built {} Active trial summary documents from {} trials", summaries.size(), activeTrials.size());
+
+            int changed = 0;
+            for (Map.Entry<String, String> summary : summaries.entrySet()) {
+                Map<String, Object> metadata = new HashMap<>();
+                metadata.put("filename", summary.getKey());
+                List<Document> chunks = splitAndLabel(List.of(new Document(summary.getValue(), metadata)));
+                if (replaceSource(summary.getKey(), chunks) != LoadResult.UNCHANGED) {
+                    changed++;
+                }
+            }
+
+            int removed = 0;
+            for (String fileName : repository.findDistinctFileNames()) {
+                if (fileName != null && fileName.startsWith(ActiveTrialSummaryBuilder.FILE_NAME_PREFIX)
+                        && !summaries.containsKey(fileName)) {
+                    repository.deleteAll(repository.findByFileName(fileName));
+                    removed++;
+                }
+            }
+            LOG.info("Active trial summary: {} documents added or updated, {} unchanged, {} removed",
+                    changed, summaries.size() - changed, removed);
+
+        } catch (Exception e) {
+            // Trial pages are already loaded; a summary failure should not fail the run
+            LOG.error("Failed to load Active trial summary documents", e);
         }
     }
 

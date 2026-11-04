@@ -26,6 +26,10 @@ public class DocumentEmbeddingOpenAI {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    // SHA-256 of a source's chunks + embedding model; unchanged sources are not re-embedded
+    @Column(name = "content_hash", length = 64)
+    private String contentHash;
+
     public DocumentEmbeddingOpenAI() {}
 
     // Getters and Setters
@@ -67,5 +71,13 @@ public class DocumentEmbeddingOpenAI {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getContentHash() {
+        return contentHash;
+    }
+
+    public void setContentHash(String contentHash) {
+        this.contentHash = contentHash;
     }
 }
