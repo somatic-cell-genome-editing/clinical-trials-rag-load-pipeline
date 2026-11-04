@@ -5,6 +5,7 @@ import edu.mcw.scge.reader.UrlDocumentReader;
 import edu.mcw.scge.service.ActiveTrialSummaryBuilder;
 import edu.mcw.scge.service.ChunkLabeler;
 import edu.mcw.scge.service.DocumentPreprocessor;
+import edu.mcw.scge.services.SCGEContext;
 import edu.mcw.scge.repository.DocumentEmbeddingOpenAIRepository;
 import edu.mcw.scge.model.DocumentEmbeddingOpenAI;
 import edu.mcw.scge.dao.DataSourceFactory;
@@ -43,28 +44,45 @@ public class UrlController {
     private final DocumentEmbeddingOpenAIRepository repository;
     private final String embeddingModelName;
     private final String embeddingDimensions;
+    private final String platformBaseUrl;
 
     public UrlController(@Qualifier("openaiVectorStore") VectorStore openaiVectorStore,
                          DocumentPreprocessor preprocessor,
                          DocumentEmbeddingOpenAIRepository repository,
                          @Value("${spring.ai.openai.embedding.options.model:text-embedding-ada-002}") String embeddingModelName,
-                         @Value("${spring.ai.openai.embedding.options.dimensions:}") String embeddingDimensions){
+                         @Value("${spring.ai.openai.embedding.options.dimensions:}") String embeddingDimensions,
+                         @Value("${pipeline.platform-base-url:}") String platformBaseUrl){
         this.openaiVectorStore = openaiVectorStore;
         this.preprocessor = preprocessor;
         this.repository = repository;
         this.embeddingModelName = embeddingModelName;
         this.embeddingDimensions = embeddingDimensions;
+        this.platformBaseUrl = platformBaseUrl.isBlank() ? defaultPlatformBaseUrl() : platformBaseUrl.replaceAll("/+$", "");
+        LOG.info("Trial pages are read from {}", this.platformBaseUrl);
+    }
+
+    /**
+     * SCGE site whose trial pages are embedded: production on the production server,
+     * otherwise dev. Never stage. Override with pipeline.platform-base-url.
+     */
+    private static String defaultPlatformBaseUrl() {
+        try {
+            return SCGEContext.isProduction() ? "https://scge.mcw.edu" : "https://dev.scge.mcw.edu";
+        } catch (Exception e) {
+            LOG.warn("Could not determine server - using dev site for trial pages", e);
+            return "https://dev.scge.mcw.edu";
+        }
     }
 
     public void loadClinicalTrials() {
         LOG.info("Starting clinical trials loading process (embedding model: {})", embeddingModelName);
 
         try {
-            // Get NCT IDs from scgeplatformcur database
-            DataSource curationDS = DataSourceFactory.getInstance().getScgePlatformCurDataSource();
-            ClinicalTrailDAO dao = new ClinicalTrailDAO(curationDS);
+            // Get NCT IDs from the platform database of this server (scgeplatformDataSource in default_db.xml)
+            DataSource platformDS = DataSourceFactory.getInstance().getScgePlatformDataSource();
+            ClinicalTrailDAO dao = new ClinicalTrailDAO(platformDS);
             List<String> nctIds = dao.getNctIdsByRecordStatus("Active");
-            LOG.info("Retrieved {} NCT IDs from scgeplatformcur database", nctIds.size());
+            LOG.info("Retrieved {} Active NCT IDs from scgeplatform database", nctIds.size());
 
             Set<String> activeIds = new TreeSet<>();
             for (String nctId : nctIds) {
@@ -82,7 +100,7 @@ public class UrlController {
 
             for (String nctId : activeIds) {
                 try {
-                    String url = "https://scge.mcw.edu/platform/data/report/clinicalTrials/" + nctId;
+                    String url = platformBaseUrl + "/platform/data/report/clinicalTrials/" + nctId;
                     LOG.info("Processing trial: {}", nctId);
 
                     List<Document> chunks = buildChunks(url);
