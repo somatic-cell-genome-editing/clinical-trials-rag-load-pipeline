@@ -1,0 +1,35 @@
+# Public SCGE pages embedded for the chatbot by clinical-trials-rag-load-pipeline.
+# One page per line: URL | name shown as the source in chatbot answers.
+# {platform} is the SCGE Platform of this server (dev.scge.mcw.edu/platform on dev,
+# scge.mcw.edu/platform on production). Only public pages - nothing behind the login.
+# Pages removed from this list are removed from the embeddings on the next run.
+# Override the whole list with pipeline.pages-file=/path/to/file in application.properties.
+
+# SCGE Platform
+{platform}/home | SCGE Platform Home
+{platform}/data/ind/templates | SCGE IND Application Toolkit and Templates
+{platform}/public/documents/regulatory | SCGE Regulatory Documents
+
+# Patients, caregivers and clinicians
+https://scge.mcw.edu/patient-caregiver-guide/ | Patient and Caregiver Guide
+https://scge.mcw.edu/pcp-guide/ | Primary Care Physician Rare Disease Guide
+https://scge.mcw.edu/genetherapy/ | What is Gene Therapy?
+https://scge.mcw.edu/clinicaltrials/ | What are Clinical Trials?
+https://scge.mcw.edu/rare-diseases/ | Rare Diseases Studied in SCGE Phase 2
+https://scge.mcw.edu/patient-engagement/ | Patient Engagement in Research
+https://scge.mcw.edu/elsi/ | Ethical, Legal, and Social Implications of Gene Editing
+
+# SCGE program
+https://scge.mcw.edu/about-the-scge-phase-2/ | About SCGE Phase 2
+https://scge.mcw.edu/about-us/ | About the SCGE Consortium
+https://scge.mcw.edu/phase-2-tcdc/ | SCGE Translational Coordination and Dissemination Center
+https://scge.mcw.edu/phase-2-ind-enabling-studies/ | IND-Enabling Studies for Therapeutic Leads
+https://scge.mcw.edu/ind-enabling-studies-multiple-disease-platforms/ | IND-Enabling Studies for Multiple Disease Platforms
+https://scge.mcw.edu/phase-2-platform-clinical-trials/ | Platform Clinical Trials of Genome Editors
+https://scge.mcw.edu/phase-2-technology-and-assays/ | Technologies and Assays for Therapeutic Genome Editing
+
+# Publications and resources
+https://scge.mcw.edu/phase-2-publications/ | SCGE Phase 2 Publications
+https://scge.mcw.edu/publications-by-project/ | SCGE Publications by Project
+https://scge.mcw.edu/scge-resources/ | Genome Editing Researcher Resources
+https://scge.mcw.edu/meet-the-expert/ | Meet the Expert Webinar Series

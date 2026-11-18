@@ -29,8 +29,10 @@ public class ClinicalTrialsUpdatePipeline implements CommandLineRunner {
             LOG.info("Starting clinical trials update process...");
             long startTime = System.currentTimeMillis();
 
-            // Run the clinical trials loading process
+            // Clinical trials, then public SCGE pages and documents; each part logs its own failures
             urlController.loadClinicalTrials();
+            urlController.loadSitePages();
+            urlController.loadDocuments();
 
             long endTime = System.currentTimeMillis();
             long elapsedSeconds = (endTime - startTime) / 1000;

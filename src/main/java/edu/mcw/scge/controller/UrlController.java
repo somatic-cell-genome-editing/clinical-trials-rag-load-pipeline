@@ -13,31 +13,39 @@ import edu.mcw.scge.dao.implementation.ClinicalTrailDAO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.tika.TikaDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class UrlController {
     private static final Logger LOG = LoggerFactory.getLogger(UrlController.class);
     private static final String TRIAL_FILE_PREFIX = "CLINICAL TRIAL: ";
+    private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "docx", "doc", "md", "txt");
 
     private final VectorStore openaiVectorStore;
     private final DocumentPreprocessor preprocessor;
@@ -45,13 +53,17 @@ public class UrlController {
     private final String embeddingModelName;
     private final String embeddingDimensions;
     private final String platformBaseUrl;
+    private final String pagesFile;
+    private final String documentsDir;
 
     public UrlController(@Qualifier("openaiVectorStore") VectorStore openaiVectorStore,
                          DocumentPreprocessor preprocessor,
                          DocumentEmbeddingOpenAIRepository repository,
                          @Value("${spring.ai.openai.embedding.options.model:text-embedding-ada-002}") String embeddingModelName,
                          @Value("${spring.ai.openai.embedding.options.dimensions:}") String embeddingDimensions,
-                         @Value("${pipeline.platform-base-url:}") String platformBaseUrl){
+                         @Value("${pipeline.platform-base-url:}") String platformBaseUrl,
+                         @Value("${pipeline.pages-file:}") String pagesFile,
+                         @Value("${pipeline.documents-dir:}") String documentsDir){
         this.openaiVectorStore = openaiVectorStore;
         this.preprocessor = preprocessor;
         this.repository = repository;
@@ -59,6 +71,8 @@ public class UrlController {
         this.embeddingDimensions = embeddingDimensions;
         this.platformBaseUrl = platformBaseUrl.isBlank() ? defaultPlatformBaseUrl() : platformBaseUrl.replaceAll("/+$", "");
         LOG.info("Trial pages are read from {}", this.platformBaseUrl);
+        this.pagesFile = pagesFile;
+        this.documentsDir = documentsDir;
     }
 
     /**
@@ -103,7 +117,7 @@ public class UrlController {
                     String url = platformBaseUrl + "/platform/data/report/clinicalTrials/" + nctId;
                     LOG.info("Processing trial: {}", nctId);
 
-                    List<Document> chunks = buildChunks(url);
+                    List<Document> chunks = buildChunks(url, TRIAL_FILE_PREFIX + nctId);
                     if (chunks == null) {
                         failed.add(nctId);
                         LOG.error("Failed to process trial: {} (existing entries kept)", nctId);
@@ -141,9 +155,227 @@ public class UrlController {
     private enum LoadResult { ADDED, UPDATED, UNCHANGED }
 
     /**
+     * Embed the public SCGE pages listed in site-pages.txt (or pipeline.pages-file) and remove
+     * pages this pipeline loaded earlier that are no longer listed. Pages are stored as
+     * "name:url" so the chatbot cites them by URL.
+     */
+    public void loadSitePages() {
+        List<String[]> pages;
+        try {
+            pages = readPageList();
+        } catch (Exception e) {
+            LOG.error("Could not read the page list - site pages skipped", e);
+            return;
+        }
+        LOG.info("Loading {} site pages", pages.size());
+
+        Set<String> listed = new HashSet<>();
+        List<String> added = new ArrayList<>();
+        List<String> updated = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+
+        for (String[] page : pages) {
+            String url = page[0];
+            String fileName = page[1] + ":" + url;
+            listed.add(fileName);
+            try {
+                List<Document> chunks = buildChunks(url, fileName);
+                if (chunks == null) {
+                    failed.add(url);
+                    LOG.error("Failed to load page: {} (existing entries kept)", url);
+                    continue;
+                }
+                switch (replaceSource(fileName, chunks)) {
+                    case ADDED -> added.add(url);
+                    case UPDATED -> updated.add(url);
+                    case UNCHANGED -> unchanged.add(url);
+                }
+            } catch (Exception e) {
+                failed.add(url);
+                LOG.error("Exception loading page: {} (existing entries kept)", url, e);
+            }
+        }
+
+        // Pages added by hand with Process URL have no content hash and are left alone
+        List<String> removed = new ArrayList<>();
+        if (!pages.isEmpty()) {
+            for (String fileName : repository.findDistinctFileNames()) {
+                if (fileName != null && fileName.contains(":http") && !listed.contains(fileName)
+                        && isLoadedByPipeline(fileName)) {
+                    repository.deleteAll(repository.findByFileName(fileName));
+                    removed.add(fileName);
+                }
+            }
+        }
+
+        LOG.info("Site pages complete. Listed: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed: {}",
+                pages.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
+        LOG.info("Failed pages: {}", failed);
+        LOG.info("Removed pages: {}", removed);
+    }
+
+    /**
+     * Lines of "URL | name"; {platform} is this server's SCGE Platform.
+     */
+    private List<String[]> readPageList() throws IOException {
+        List<String> lines;
+        if (pagesFile.isBlank()) {
+            try (InputStream in = new ClassPathResource("site-pages.txt").getInputStream()) {
+                lines = new String(in.readAllBytes(), StandardCharsets.UTF_8).lines().toList();
+            }
+        } else {
+            lines = Files.readAllLines(Path.of(pagesFile), StandardCharsets.UTF_8);
+        }
+
+        String platform = platformBaseUrl + "/platform";
+        List<String[]> pages = new ArrayList<>();
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#")) {
+                continue;
+            }
+            int bar = trimmed.indexOf('|');
+            String url = (bar >= 0 ? trimmed.substring(0, bar) : trimmed).trim().replace("{platform}", platform);
+            String name = bar >= 0 ? trimmed.substring(bar + 1).trim() : "";
+            if (name.isEmpty() || name.contains(":http")) {
+                name = url;
+            }
+            pages.add(new String[]{url, name});
+        }
+        return pages;
+    }
+
+    /**
+     * Embed the documents (PDF, Word, Markdown, text) in pipeline.documents-dir and remove
+     * documents this pipeline loaded earlier whose file is gone. Documents are stored under
+     * their file name, which the chatbot links as /docs/<name> (name.md links to name.pdf).
+     */
+    public void loadDocuments() {
+        if (documentsDir.isBlank()) {
+            LOG.info("pipeline.documents-dir is not set - documents skipped");
+            return;
+        }
+        Path dir = Path.of(documentsDir);
+        if (!Files.isDirectory(dir)) {
+            LOG.error("Documents folder not found: {} - documents skipped", dir);
+            return;
+        }
+
+        List<Path> files;
+        try (Stream<Path> listing = Files.list(dir)) {
+            files = listing.filter(Files::isRegularFile)
+                    .filter(f -> DOCUMENT_EXTENSIONS.contains(extension(f)))
+                    .sorted()
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            LOG.error("Could not list documents folder: {} - documents skipped", dir, e);
+            return;
+        }
+
+        // name.md is the text version of name.pdf - embed the .md only
+        Set<String> markdownBases = files.stream().filter(f -> extension(f).equals("md"))
+                .map(UrlController::baseName).collect(Collectors.toSet());
+        files.removeIf(f -> extension(f).equals("pdf") && markdownBases.contains(baseName(f)));
+
+        if (files.isEmpty()) {
+            LOG.warn("No documents in {} - documents skipped (nothing removed)", dir);
+            return;
+        }
+        LOG.info("Loading {} documents from {}", files.size(), dir);
+
+        Set<String> present = new HashSet<>();
+        List<String> added = new ArrayList<>();
+        List<String> updated = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+
+        for (Path file : files) {
+            String fileName = file.getFileName().toString();
+            present.add(fileName);
+            try {
+                List<Document> chunks = buildDocumentChunks(file, fileName);
+                if (chunks == null) {
+                    failed.add(fileName);
+                    continue;
+                }
+                switch (replaceSource(fileName, chunks)) {
+                    case ADDED -> added.add(fileName);
+                    case UPDATED -> updated.add(fileName);
+                    case UNCHANGED -> unchanged.add(fileName);
+                }
+            } catch (Exception e) {
+                failed.add(fileName);
+                LOG.error("Exception loading document: {} (existing entries kept)", fileName, e);
+            }
+        }
+
+        // Documents uploaded through the Curation page have no content hash and are left alone
+        List<String> removed = new ArrayList<>();
+        for (String fileName : repository.findDistinctFileNames()) {
+            if (fileName != null && !fileName.contains(":http") && !fileName.startsWith(TRIAL_FILE_PREFIX)
+                    && !fileName.startsWith(TrialSummaryBuilder.FILE_NAME_PREFIX)
+                    && !fileName.startsWith(TrialSummaryBuilder.OLD_FILE_NAME_PREFIX)
+                    && !present.contains(fileName) && isLoadedByPipeline(fileName)) {
+                repository.deleteAll(repository.findByFileName(fileName));
+                removed.add(fileName);
+            }
+        }
+
+        LOG.info("Documents complete. Files: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed: {}",
+                files.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
+        LOG.info("Failed documents: {}", failed);
+        LOG.info("Removed documents: {}", removed);
+    }
+
+    private List<Document> buildDocumentChunks(Path file, String fileName) {
+        try {
+            List<Document> documents = new TikaDocumentReader(new FileSystemResource(file)).get().stream()
+                    .map(doc -> {
+                        Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
+                        metadata.put("filename", fileName);
+                        return new Document(doc.getContent(), metadata);
+                    })
+                    .collect(Collectors.toList());
+
+            // Same quality filter as uploads through the chat app
+            List<Document> chunks = splitAndLabel(documents).stream()
+                    .filter(chunk -> preprocessor.isQualityChunk(chunk.getContent()))
+                    .collect(Collectors.toList());
+            if (chunks.isEmpty()) {
+                LOG.error("No usable text in document: {}", fileName);
+                return null;
+            }
+            return chunks;
+        } catch (Exception e) {
+            LOG.error("Failed to read document: {}", fileName, e);
+            return null;
+        }
+    }
+
+    /**
+     * Rows saved by this pipeline carry a content hash; manual uploads do not.
+     */
+    private boolean isLoadedByPipeline(String fileName) {
+        return repository.findByFileName(fileName).stream().anyMatch(row -> row.getContentHash() != null);
+    }
+
+    private static String extension(Path file) {
+        String name = file.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot < 0 ? "" : name.substring(dot + 1).toLowerCase();
+    }
+
+    private static String baseName(Path file) {
+        String name = file.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot < 0 ? name : name.substring(0, dot);
+    }
+
+    /**
      * Fetch a page and turn it into labeled chunks. Returns null if the page could not be read.
      */
-    private List<Document> buildChunks(String urlString) {
+    private List<Document> buildChunks(String urlString, String fileName) {
         try {
             // Fetch content from URL
             UrlDocumentReader documentReader = new UrlDocumentReader(urlString);
@@ -158,7 +390,7 @@ public class UrlController {
             List<Document> documentsWithFilename = documents.stream()
                     .map(doc -> {
                         Map<String, Object> mutableMetadata = new HashMap<>(doc.getMetadata());
-                        mutableMetadata.put("filename", extractFilenameFromUrl(urlString));
+                        mutableMetadata.put("filename", fileName);
                         return new Document(doc.getContent(), mutableMetadata);
                     })
                     .collect(Collectors.toList());
@@ -319,37 +551,4 @@ public class UrlController {
         }
     }
 
-    private String extractFilenameFromUrl(String urlString) {
-        try {
-            URL url = new URL(urlString);
-            String path = url.getPath();
-
-            // Check if this is a clinical trial URL
-            boolean isClinicalTrialUrl = urlString.contains("/clinicalTrials/report/") ||
-                                         urlString.contains("/report/clinicalTrials/");
-
-            String filename;
-            if (path != null && !path.isEmpty() && !path.equals("/")) {
-                String[] pathParts = path.split("/");
-                String lastPart = pathParts[pathParts.length - 1];
-                if (!lastPart.isEmpty()) {
-                    filename = lastPart;
-                } else {
-                    filename = url.getHost().replaceAll("\\.", "_");
-                }
-            } else {
-                filename = url.getHost().replaceAll("\\.", "_");
-            }
-
-            // For clinical trials, prefix with "CLINICAL TRIAL: " for identification
-            if (isClinicalTrialUrl) {
-                return "CLINICAL TRIAL: " + filename;
-            } else {
-                return filename + ":" + urlString;
-            }
-
-        } catch (MalformedURLException e) {
-            return "webpage_" + System.currentTimeMillis() + ":" + urlString;
-        }
-    }
 }

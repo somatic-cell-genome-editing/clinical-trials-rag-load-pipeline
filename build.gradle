@@ -47,6 +47,8 @@ dependencies {
     // Spring AI for OpenAI integration
     implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter'
     implementation 'org.springframework.ai:spring-ai-core:1.0.0-M4'
+    // PDF / Word / Markdown text extraction for the documents folder
+    implementation 'org.springframework.ai:spring-ai-tika-document-reader'
 
     // PostgreSQL & pgvector for vector database
     implementation 'org.postgresql:postgresql:42.7.7'
