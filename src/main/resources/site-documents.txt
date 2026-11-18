@@ -1,0 +1,262 @@
+# Public PDF documents embedded for the chatbot by clinical-trials-rag-load-pipeline.
+# One document per line: URL | name shown as the source in chatbot answers.
+# {docs} is pipeline.documents-base-url (default https://scge.mcw.edu/assistant/docs, the only
+# place these files are published); {platform} is this server's SCGE Platform.
+# Byte-identical files are embedded once, under the first name listed. Documents removed from
+# this list are removed from the embeddings on the next run.
+# Override the whole list with pipeline.documents-file=/path/to/file in application.properties.
+
+# SCGE regulatory documents (pre-IND briefing books, FDA responses, meeting summaries)
+{platform}/public/download/regulatory?documentName=%272025-02-10_PRNP-CHARM-001_INTERACT-noncon-v2.pdf%27 | 2025-02-10_PRNP-CHARM-001_INTERACT-noncon-v2
+{platform}/public/download/regulatory?documentName=%272025-02-10-PRNP-CHARM-INTERACT-feedback-CBER-noncon-v2.pdf%27 | 2025-02-10-PRNP-CHARM-INTERACT-feedback-CBER-noncon-v2
+{platform}/public/download/regulatory?documentName=%27Annotated_Preliminary_Response_University_of_Wisconsin_PS010799_Meeting_ID_22451_for_sponsor_Redacted.pdf%27 | Annotated_Preliminary_Response_University_of_Wisconsin_PS010799_Meeting_ID_22451_for_sponsor_Redacted
+{platform}/public/download/regulatory?documentName=%27CHARM_Pre-IND_Meeting_Package.pdf%27 | CHARM_Pre-IND_Meeting_Package
+{platform}/public/download/regulatory?documentName=%27CHARM_preIND_Meeting_Summary.pdf%27 | CHARM_preIND_Meeting_Summary
+{platform}/public/download/regulatory?documentName=%27CHOP.UCD.PE_FDA_briefing_book_redacted.pdf%27 | CHOP.UCD.PE_FDA_briefing_book_redacted
+{platform}/public/download/regulatory?documentName=%27INTERACT_Meeting_Request_Final_04.30.2024_Redacted.pdf%27 | INTERACT_Meeting_Request_Final_04.30.2024_Redacted
+{platform}/public/download/regulatory?documentName=%27Meeting%20Summary_PS010700__Meeting%2022239_CHOP.mcc_redacted.pdf%27 | Meeting Summary_PS010700__Meeting 22239_CHOP.mcc_redacted
+{platform}/public/download/regulatory?documentName=%27PKU%20FDA%20Preliminary%20Responses_PS008879_4%20redacted.pdf%27 | PKU FDA Preliminary Responses_PS008879_4 redacted
+{platform}/public/download/regulatory?documentName=%27PKU%20Pre-IND%20briefing%20book%20redacted.pdf%27 | PKU Pre-IND briefing book redacted
+{platform}/public/download/regulatory?documentName=%27SMA_Annotated_FDA_Responses_Redacted.pdf%27 | SMA_Annotated_FDA_Responses_Redacted
+{platform}/public/download/regulatory?documentName=%27UCD%20FDA%20Signed_a_Meeting%20Summary_PS010343-CHOP%20redacted.pdf%27 | UCD FDA Signed_a_Meeting Summary_PS010343-CHOP redacted
+{platform}/public/download/regulatory?documentName=%27UCD%20Pre-IND%20briefing%20book%20redacted.pdf%27 | UCD Pre-IND briefing book redacted
+{platform}/public/download/regulatory?documentName=%27UW-LNP-ABE8E_Agency_Response_Redacted.pdf%27 | UW-LNP-ABE8E_Agency_Response_Redacted
+{platform}/public/download/regulatory?documentName=%27UW-LNP-ABE8E_INTERACT_Briefing_Book_Redacted.pdf%27 | UW-LNP-ABE8E_INTERACT_Briefing_Book_Redacted
+{platform}/public/download/regulatory?documentName=UW-LNP-SpCaS9-BEST1-R218C_PS010799_INTERACT_Briefing_Book_Redacted.pdf | UW-LNP-SpCaS9-BEST1-R218C_PS010799_INTERACT_Briefing_Book_Redacted
+
+# FDA guidance, regulations and SCGE reference documents
+{docs}/17022Rare-Diseases-Early-Drug-Development-and-the-Role-of-PreIND-Meetings.pdf | 17022Rare-Diseases-Early-Drug-Development-and-the-Role-of-PreIND-Meetings
+{docs}/2023-378_potency_draft_guidance_document_12-27-2023.pdf | 2023-378_potency_draft_guidance_document_12-27-2023
+{docs}/20429586dft_Formal_Meetings_PDUFA.pdf | 20429586dft_Formal_Meetings_PDUFA
+{docs}/21%20CFR%2010.115.pdf | 21 CFR 10.115
+{docs}/21%20CFR%2010.65.pdf | 21 CFR 10.65
+{docs}/21%20CFR%2017.1%28c%29.pdf | 21 CFR 17.1(c)
+{docs}/21%20CFR%2017.1%28e%29.pdf | 21 CFR 17.1(e)
+{docs}/21%20CFR%20201.10.pdf | 21 CFR 201.10
+{docs}/21%20CFR%20201.100.pdf | 21 CFR 201.100
+{docs}/21%20CFR%20201.17.pdf | 21 CFR 201.17
+{docs}/21%20CFR%20201.18.pdf | 21 CFR 201.18
+{docs}/21%20CFR%20201.2.pdf | 21 CFR 201.2
+{docs}/21%20CFR%20201.23.pdf | 21 CFR 201.23
+{docs}/21%20CFR%20201.55.pdf | 21 CFR 201.55
+{docs}/21%20CFR%20201.56.pdf | 21 CFR 201.56
+{docs}/21%20CFR%20201.57.pdf | 21 CFR 201.57
+{docs}/21%20CFR%20201.58.pdf | 21 CFR 201.58
+{docs}/21%20CFR%20210.2%28c%29.pdf | 21 CFR 210.2(c)
+{docs}/21%20CFR%2025.31.pdf | 21 CFR 25.31
+{docs}/21%20CFR%20299.4%28d%29.pdf | 21 CFR 299.4(d)
+{docs}/21%20CFR%20300.200.pdf | 21 CFR 300.200
+{docs}/21%20CFR%20310.305%28c%29.pdf | 21 CFR 310.305(c)
+{docs}/21%20CFR%20310.305%28d%29.pdf | 21 CFR 310.305(d)
+{docs}/21%20CFR%20312.10.pdf | 21 CFR 312.10
+{docs}/21%20CFR%20312.120%28c%29.pdf | 21 CFR 312.120(c)
+{docs}/21%20CFR%20312.20%28c%29.pdf | 21 CFR 312.20(c)
+{docs}/21%20CFR%20312.20.pdf | 21 CFR 312.20
+{docs}/21%20CFR%20312.22.pdf | 21 CFR 312.22
+{docs}/21%20CFR%20312.23%28a%29%281%29.pdf | 21 CFR 312.23(a)(1)
+{docs}/21%20CFR%20312.23%28a%29%2810%29%28i%29.pdf | 21 CFR 312.23(a)(10)(i)
+{docs}/21%20CFR%20312.23%28a%29%283%29.pdf | 21 CFR 312.23(a)(3)
+{docs}/21%20CFR%20312.23%28a%29%285%29.pdf | 21 CFR 312.23(a)(5)
+{docs}/21%20CFR%20312.23%28a%29%286%29.pdf | 21 CFR 312.23(a)(6)
+{docs}/21%20CFR%20312.23%28a%29%287%29%28iv%29%28b%29.pdf | 21 CFR 312.23(a)(7)(iv)(b)
+{docs}/21%20CFR%20312.23%28a%29%287%29%28iv%29%28c%29.pdf | 21 CFR 312.23(a)(7)(iv)(c)
+{docs}/21%20CFR%20312.23%28a%29%287%29%28iv%29%28d%29.pdf | 21 CFR 312.23(a)(7)(iv)(d)
+{docs}/21%20CFR%20312.23%28a%29%287%29%28iv%29%28e%29.pdf | 21 CFR 312.23(a)(7)(iv)(e)
+{docs}/21%20CFR%20312.23%28a%29%287%29.pdf | 21 CFR 312.23(a)(7)
+{docs}/21%20CFR%20312.23%28a%29%287%29_1.pdf | 21 CFR 312.23(a)(7)_1
+{docs}/21%20CFR%20312.23%28a%29%288%29%28i%29.pdf | 21 CFR 312.23(a)(8)(i)
+{docs}/21%20CFR%20312.23%28a%29%288%29%28ii%29.pdf | 21 CFR 312.23(a)(8)(ii)
+{docs}/21%20CFR%20312.23%28a%29%288%29.pdf | 21 CFR 312.23(a)(8)
+{docs}/21%20CFR%20312.23%28a%29%289%29.pdf | 21 CFR 312.23(a)(9)
+{docs}/21%20CFR%20312.30%28a%29.pdf | 21 CFR 312.30(a)
+{docs}/21%20CFR%20312.30%28b%29.pdf | 21 CFR 312.30(b)
+{docs}/21%20CFR%20312.30%28c%29.pdf | 21 CFR 312.30(c)
+{docs}/21%20CFR%20312.30%28d%29.pdf | 21 CFR 312.30(d)
+{docs}/21%20CFR%20312.305.pdf | 21 CFR 312.305
+{docs}/21%20CFR%20312.31%28b%29%281%29.pdf | 21 CFR 312.31(b)(1)
+{docs}/21%20CFR%20312.31.pdf | 21 CFR 312.31
+{docs}/21%20CFR%20312.310.pdf | 21 CFR 312.310
+{docs}/21%20CFR%20312.32.pdf | 21 CFR 312.32
+{docs}/21%20CFR%20312.33%28a%29.pdf | 21 CFR 312.33(a)
+{docs}/21%20CFR%20312.33%28b%29%281-3%29.pdf | 21 CFR 312.33(b)(1-3)
+{docs}/21%20CFR%20312.33%28b%29%285%29.pdf | 21 CFR 312.33(b)(5)
+{docs}/21%20CFR%20312.33%28b%29%286%29.pdf | 21 CFR 312.33(b)(6)
+{docs}/21%20CFR%20312.33%28b%29%287%29.pdf | 21 CFR 312.33(b)(7)
+{docs}/21%20CFR%20312.33%28c%29.pdf | 21 CFR 312.33(c)
+{docs}/21%20CFR%20312.33%28f%29.pdf | 21 CFR 312.33(f)
+{docs}/21%20CFR%20312.33%28g%29.pdf | 21 CFR 312.33(g)
+{docs}/21%20CFR%20312.38.pdf | 21 CFR 312.38
+{docs}/21%20CFR%20312.41.pdf | 21 CFR 312.41
+{docs}/21%20CFR%20312.45%28d%29.pdf | 21 CFR 312.45(d)
+{docs}/21%20CFR%20312.45.pdf | 21 CFR 312.45
+{docs}/21%20CFR%20312.45_1.pdf | 21 CFR 312.45_1
+{docs}/21%20CFR%20312.47.pdf | 21 CFR 312.47
+{docs}/21%20CFR%20312.48.pdf | 21 CFR 312.48
+{docs}/21%20CFR%20312.53%28c%29.pdf | 21 CFR 312.53(c)
+{docs}/21%20CFR%20312.6.pdf | 21 CFR 312.6
+{docs}/21%20CFR%20312.8.pdf | 21 CFR 312.8
+{docs}/21%20CFR%20312.82%28a%29.pdf | 21 CFR 312.82(a)
+{docs}/21%20CFR%20312.82%28b%29.pdf | 21 CFR 312.82(b)
+{docs}/21%20CFR%20314.50%20%28up%20to%20date%20as%20of%202-04-2026%29.pdf | 21 CFR 314.50 (up to date as of 2-04-2026)
+{docs}/21%20CFR%20314.50%28d%29%281%29%28v%29.pdf | 21 CFR 314.50(d)(1)(v)
+{docs}/21%20CFR%20314.50%28d%29%285%29%28x%29.pdf | 21 CFR 314.50(d)(5)(x)
+{docs}/21%20CFR%20314.50%28h%29.pdf | 21 CFR 314.50(h)
+{docs}/21%20CFR%20314.50%28i%29.pdf | 21 CFR 314.50(i)
+{docs}/21%20CFR%20314.50%28k%29.pdf | 21 CFR 314.50(k)
+{docs}/21%20CFR%20314.72.pdf | 21 CFR 314.72
+{docs}/21%20CFR%20314.81%28b%29%282%29.pdf | 21 CFR 314.81(b)(2)
+{docs}/21%20CFR%20314.81%28b%29%283%29%28i%29.pdf | 21 CFR 314.81(b)(3)(i)
+{docs}/21%20CFR%20316.20.pdf | 21 CFR 316.20
+{docs}/21%20CFR%20320.22.pdf | 21 CFR 320.22
+{docs}/21%20CFR%2050.24.pdf | 21 CFR 50.24
+{docs}/21%20CFR%2058.35.pdf | 21 CFR 58.35
+{docs}/21%20CFR%20600.11%28h%29.pdf | 21 CFR 600.11(h)
+{docs}/21%20CFR%20600.11.pdf | 21 CFR 600.11
+{docs}/21%20CFR%20600.12.pdf | 21 CFR 600.12
+{docs}/21%20CFR%20600.80.pdf | 21 CFR 600.80
+{docs}/21%20CFR%20600.81.pdf | 21 CFR 600.81
+{docs}/21%20CFR%20601.12%28d%29.pdf | 21 CFR 601.12(d)
+{docs}/21%20CFR%20601.12%28f%29%282%29.pdf | 21 CFR 601.12(f)(2)
+{docs}/21%20CFR%20601.12%28f%29%283%29.pdf | 21 CFR 601.12(f)(3)
+{docs}/21%20CFR%20601.12%28f%29%284%29.pdf | 21 CFR 601.12(f)(4)
+{docs}/21%20CFR%20601.12.pdf | 21 CFR 601.12
+{docs}/21%20CFR%20601.2%20-%20duplicate.pdf | 21 CFR 601.2 - duplicate
+{docs}/21%20CFR%20601.2%28f%29.pdf | 21 CFR 601.2(f)
+{docs}/21%20CFR%20601.2%28g%29.pdf | 21 CFR 601.2(g)
+{docs}/21%20CFR%20601.2.pdf | 21 CFR 601.2
+{docs}/21%20CFR%20601.27%28b%29.pdf | 21 CFR 601.27(b)
+{docs}/21%20CFR%20601.27%28c%29.pdf | 21 CFR 601.27(c)
+{docs}/21%20CFR%20601.70.pdf | 21 CFR 601.70
+{docs}/21%20CFR%20610.1.pdf | 21 CFR 610.1
+{docs}/21%20CFR%20610.10.pdf | 21 CFR 610.10
+{docs}/21%20CFR%20610.12.pdf | 21 CFR 610.12
+{docs}/21%20CFR%20610.13.pdf | 21 CFR 610.13
+{docs}/21%20CFR%20610.14.pdf | 21 CFR 610.14
+{docs}/21%20CFR%20610.18.pdf | 21 CFR 610.18
+{docs}/21%20CFR%20610.50.pdf | 21 CFR 610.50
+{docs}/21%20CFR%20Part%2011%20Subpart%20A.pdf | 21 CFR Part 11 Subpart A
+{docs}/21%20CFR%20Part%2011%20Subpart%20B.pdf | 21 CFR Part 11 Subpart B
+{docs}/21%20CFR%20Part%2011%20Subpart%20C.pdf | 21 CFR Part 11 Subpart C
+{docs}/21%20CFR%20Part%2014%20Subpart%20I.pdf | 21 CFR Part 14 Subpart I
+{docs}/21%20CFR%20Part%20202.pdf | 21 CFR Part 202
+{docs}/21%20CFR%20Part%20203.pdf | 21 CFR Part 203
+{docs}/21%20CFR%20Part%20320.pdf | 21 CFR Part 320
+{docs}/21%20CFR%20Part%2054.pdf | 21 CFR Part 54
+{docs}/21%20CFR%20Part%2056%20-%20Institutional%20Review%20Boards.pdf | 21 CFR Part 56 - Institutional Review Boards
+{docs}/21%20CFR%20Part%2058%20Subpart%20C.pdf | 21 CFR Part 58 Subpart C
+{docs}/21%20CFR%20Part%2058%20Subpart%20D.pdf | 21 CFR Part 58 Subpart D
+{docs}/21%20CFR%20Part%2058%20Subpart%20E.pdf | 21 CFR Part 58 Subpart E
+{docs}/21%20CFR%20Part%2058%20Subpart%20F.pdf | 21 CFR Part 58 Subpart F
+{docs}/21%20CFR%20Part%2058%20Subpart%20G.pdf | 21 CFR Part 58 Subpart G
+{docs}/21%20CFR%20Part%2058%20Subpart%20J.pdf | 21 CFR Part 58 Subpart J
+{docs}/21%20CFR%20Part%20601%20Subpart%20E.pdf | 21 CFR Part 601 Subpart E
+{docs}/21%20CFR%20Part%20610%20Subpart%20G.pdf | 21 CFR Part 610 Subpart G
+{docs}/25036897fnl_1.pdf | 25036897fnl_1
+{docs}/50095386fnl-S12_Nonclinical_Biodistribution_Considerations_for_Gene_Therapy_Products.pdf | 50095386fnl-S12_Nonclinical_Biodistribution_Considerations_for_Gene_Therapy_Products
+{docs}/ANDA%20Submissions%20-Content%20and%20Format.pdf | ANDA Submissions -Content and Format
+{docs}/Annual%20Summary%20Reporting%20Requirements%20Under%20the%20Right%20to%20Try%20Act.pdf | Annual Summary Reporting Requirements Under the Right to Try Act
+{docs}/CGMP%20for%20Phase%201%20Investigational%20Drugs.pdf | CGMP for Phase 1 Investigational Drugs
+{docs}/Charging%20for%20Investigational%20Drugs%20Under%20an%20IND%20Questions%20and%20Answers.pdf | Charging for Investigational Drugs Under an IND Questions and Answers
+{docs}/Chemistry%2C%20Manufacturing%2C%20and%20Control%20%28CMC%29%20Information%20for%20Human%20Gene%20Therapy%20Investigational%20New%20Drug%20Applications%20%28INDs%29.pdf | Chemistry, Manufacturing, and Control (CMC) Information for Human Gene Therapy Investigational New Drug Applications (INDs)
+{docs}/Civil%20Money%20Penalties%20Relating%20to%20the%20ClinicalTrialsgov%20Data%20Bank.pdf | Civil Money Penalties Relating to the ClinicalTrialsgov Data Bank
+{docs}/CMC-Information-Human-Gene-Therapy-IND-Applications_Jan_2020.pdf | CMC-Information-Human-Gene-Therapy-IND-Applications_Jan_2020
+{docs}/COMMON%20TECHNICAL%20DOCUMENT%20FOR%20THE%20REGISTRATION%20OF%20PHARMACEUTICALS%20FOR%20HUMAN%20USE%20SAFETY%20NONCLINICAL%20OVERVIEW%20AND%20NONCLINICAL%20SUMMARIES%20OF%20MODULE%202%20%20ORGANISATION%20OF%20MODULE%204.pdf | COMMON TECHNICAL DOCUMENT FOR THE REGISTRATION OF PHARMACEUTICALS FOR HUMAN USE SAFETY NONCLINICAL OVERVIEW AND NONCLINICAL SUMMARIES OF MODULE 2  ORGANISATION OF MODULE 4
+{docs}/Comparability%20Protocols%20for%20Postapproval%20Changes%20to%20the%20Chemistry%2C%20Manufacturing%2C%20and%20Controls%20Information%20in%20an%20NDA%2C%20ANDA%2C%20or%20BLA.pdf | Comparability Protocols for Postapproval Changes to the Chemistry, Manufacturing, and Controls Information in an NDA, ANDA, or BLA
+{docs}/Compliance%20Policy%20Regarding%20Blood%20and%20Blood%20Component%20Donation%20Suitability%2C%20Donor%20Eligibility%20and%20Source%20Plasma%20Quarantine%20Hold%20Requirements.pdf | Compliance Policy Regarding Blood and Blood Component Donation Suitability, Donor Eligibility and Source Plasma Quarantine Hold Requirements
+{docs}/Conducting%20Clinical%20Trials%20With%20Decentralized%20Elements%20Guidance%20for%20Industry%2C%20Investigators%2C%20and%20Other%20Interested%20Parties.pdf | Conducting Clinical Trials With Decentralized Elements Guidance for Industry, Investigators, and Other Interested Parties
+{docs}/Content%20and%20Format%20of%20Investigational%20New%20Drug%20Applications%20%28INDs%29%20for%20Phase%201%20Studies%20of%20Drugs%2C%20Including%20Well-Characterized%2C%20Therapeutic%2C%20Biotechnology-derived%20Products.pdf | Content and Format of Investigational New Drug Applications (INDs) for Phase 1 Studies of Drugs, Including Well-Characterized, Therapeutic, Biotechnology-derived Products
+{docs}/Content-Review-CMC_Informatio-_Human_-Somatic-Cell-Therapy_02-02-2025.pdf | Content-Review-CMC_Informatio-_Human_-Somatic-Cell-Therapy_02-02-2025
+{docs}/Contract%20Manufacturing%20Arrangements%20for%20Drugs%20Quality%20Agreements.pdf | Contract Manufacturing Arrangements for Drugs Quality Agreements
+{docs}/december_2024_town_hall_transcript.pdf | december_2024_town_hall_transcript
+{docs}/Demonstrating%20Substantial%20Evidence%20of%20Effectiveness%20With%20One%20Adequate%20and%20Well-Controlled%20Clinical%20Investigation%20and%20Confirmatory%20Evidence.pdf | Demonstrating Substantial Evidence of Effectiveness With One Adequate and Well-Controlled Clinical Investigation and Confirmatory Evidence
+{docs}/Determining%20the%20Need%20for%20and%20Content%20of%20Environmental%20Assessments%20for%20Gene%20Therapies%2C%20Vectored%20Vaccines%2C%20and%20Related%20Recombinant%20Viral%20or%20Microbial%20Products.pdf | Determining the Need for and Content of Environmental Assessments for Gene Therapies, Vectored Vaccines, and Related Recombinant Viral or Microbial Products
+{docs}/E2F%20Development%20Safety%20Update%20Report.pdf | E2F Development Safety Update Report
+{docs}/eCTD%20v4.0%20Comprehensive%20Table%20of%20Contents%20Headings%20and%20Hierarchy.pdf | eCTD v4.0 Comprehensive Table of Contents Headings and Hierarchy
+{docs}/eCTD%20v4.0%20Technical%20Conformance%20Guide.pdf | eCTD v4.0 Technical Conformance Guide
+{docs}/Exception%20from%20Informed%20Consent%20Requirements%20for%20Emergency%20Research.pdf | Exception from Informed Consent Requirements for Emergency Research
+{docs}/Expedited%20Programs%20for%20Regenerative%20Medicine%20Therapies%20for%20Serious%20Conditions.pdf | Expedited Programs for Regenerative Medicine Therapies for Serious Conditions
+{docs}/FDA%20Module%201%20Electronic%20Common%20Technical%20Document%20%28eCTD%29%20v4.0%20Implementation%20Guide%20v1.7.pdf | FDA Module 1 Electronic Common Technical Document (eCTD) v4.0 Implementation Guide v1.7
+{docs}/FDA-1571_Instructions_R14_03-21-2023.pdf | FDA-1571_Instructions_R14_03-21-2023
+{docs}/FDA-3674_Dyn_Sec_Ext_04-15-2024.pdf | FDA-3674_Dyn_Sec_Ext_04-15-2024
+{docs}/FDA-4035_Dyn_Ext_3.5.2026.pdf | FDA-4035_Dyn_Ext_3.5.2026
+{docs}/fda_cber_otp_gene_editing_guidance_transcript.pdf | fda_cber_otp_gene_editing_guidance_transcript
+{docs}/fda_cber_otp_gene_editing_guidance_webinar_transcript.pdf | fda_cber_otp_gene_editing_guidance_webinar_transcript
+{docs}/FDA_OTP_Town_Hall_Gene_Therapy_CMC_2023_Transcript.pdf | FDA_OTP_Town_Hall_Gene_Therapy_CMC_2023_Transcript
+{docs}/FDAMA.pdf | FDAMA
+{docs}/Field%20Alert%20Report%20Submission%20Questions%20and%20Answers.pdf | Field Alert Report Submission Questions and Answers
+{docs}/FinalGuidance_3.23.15.pdf | FinalGuidance_3.23.15
+{docs}/Form%20FDA%203674%20-%20Certifications%20To%20Accompany%20Drug%2C%20Biological%20Product%2C%20and%20Device%20ApplicationsSubmissions.pdf | Form FDA 3674 - Certifications To Accompany Drug, Biological Product, and Device ApplicationsSubmissions
+{docs}/General%20Considerations%20for%20the%20Use%20of%20New%20Approach%20Methodologies%20in%20Drug%20Development.pdf | General Considerations for the Use of New Approach Methodologies in Drug Development
+{docs}/Generic%20Drug%20Enforcement%20Act%20of%201992.pdf | Generic Drug Enforcement Act of 1992
+{docs}/Guidance%20for%20Clinical%20Investigators%2C%20Industry%2C%20%20and%20FDA%20Staff%20Financial%20Disclosure%20by%20Clinical%20Investigators.pdf | Guidance for Clinical Investigators, Industry,  and FDA Staff Financial Disclosure by Clinical Investigators
+{docs}/Guidance%20for%20Industry%20and%20FDA%20Staff%20Current%20Good%20Manufacturing%20Practice%20Requirements%20for%20Combination%20Products.pdf | Guidance for Industry and FDA Staff Current Good Manufacturing Practice Requirements for Combination Products
+{docs}/Guidance%20for%20Industry%20Container%20Closure%20Systems%20for%20Packaging%20Human%20Drugs%20and%20Biologics%20CHEMISTRY%2C%20MANUFACTURING%2C%20AND%20CONTROLS%20DOCUMENTATION.pdf | Guidance for Industry Container Closure Systems for Packaging Human Drugs and Biologics CHEMISTRY, MANUFACTURING, AND CONTROLS DOCUMENTATION
+{docs}/Guidance%20for%20Industry%20Direct-to-Consumer%20Television%20Advertisements%20-%20FDAAA%20DTC%20Television%20Ad%20PreDissemination%20Review%20Program.pdf | Guidance for Industry Direct-to-Consumer Television Advertisements - FDAAA DTC Television Ad PreDissemination Review Program
+{docs}/Guidance%20for%20Industry%20Expedited%20Programs%20for%20Serious%20Conditions%20-%20Drugs%20and%20Biologics.pdf | Guidance for Industry Expedited Programs for Serious Conditions - Drugs and Biologics
+{docs}/Guidance%20for%20Industry%20M4%20The%20CTD%20-%20General%20Questions%20and%20Answers.pdf | Guidance for Industry M4 The CTD - General Questions and Answers
+{docs}/Guidance%20for%20Industry%20Nonclinical%20Studies%20for%20the%20Safety%20Evaluation%20of%20Pharmaceutical%20Excipients.pdf | Guidance for Industry Nonclinical Studies for the Safety Evaluation of Pharmaceutical Excipients
+{docs}/H.R.3580%20-%20Food%20and%20Drug%20Administration%20Amendments%20Act%20of%202007.pdf | H.R.3580 - Food and Drug Administration Amendments Act of 2007
+{docs}/How%20to%20Comply%20with%20the%20Pediatric%20Research%20Equity%20Act.pdf | How to Comply with the Pediatric Research Equity Act
+{docs}/Human-Gene-Therapy-for-Rare_Diseases_Jan_2020.pdf | Human-Gene-Therapy-for-Rare_Diseases_Jan_2020
+{docs}/Human-Gene-Therapy-for-Retinal-Disorders_Jan_2020_0.pdf | Human-Gene-Therapy-for-Retinal-Disorders_Jan_2020_0
+{docs}/Human-Gene-Therapy-Incorporating-Human-Genome-Editing.pdf | Human-Gene-Therapy-Incorporating-Human-Genome-Editing
+{docs}/ICH%20eCTD%20v4.0%20Implementation%20Guide.pdf | ICH eCTD v4.0 Implementation Guide
+{docs}/ICH%20HARMONISED%20TRIPARTITE%20GUIDELINE%20STRUCTURE%20AND%20CONTENT%20OF%20CLINICAL%20STUDY%20REPORTS%20E3.pdf | ICH HARMONISED TRIPARTITE GUIDELINE STRUCTURE AND CONTENT OF CLINICAL STUDY REPORTS E3
+{docs}/INDs%20for%20Phase%202%20and%20Phase%203%20Studies-%20Chemistry%2C%20Manufacturing%2C%20and%20Controls%20%28CMC%29%20Information.pdf | INDs for Phase 2 and Phase 3 Studies- Chemistry, Manufacturing, and Controls (CMC) Information
+{docs}/Information%20Sheet%20Guidance%20for%20Sponsors%2C%20Clinical%20Investigators%2C%20and%20IRBs%20Frequently%20Asked%20Questions%20-%20Statement%20of%20Investigator%20%28Form%20FDA%201572%29.pdf | Information Sheet Guidance for Sponsors, Clinical Investigators, and IRBs Frequently Asked Questions - Statement of Investigator (Form FDA 1572)
+{docs}/Innovative%20Designs%20for%20Clinical%20Trials%20of%20Cellular%20and%20Gene%20Therapy%20Products%20in%20Small%20Populations.pdf | Innovative Designs for Clinical Trials of Cellular and Gene Therapy Products in Small Populations
+{docs}/Instructions%20for%20Forms%20FDA%201571%2C%20FDA%201572%2C%20FDA%203674.pdf | Instructions for Forms FDA 1571, FDA 1572, FDA 3674
+{docs}/Investigational%20New%20Drug%20Applications%20Prepared%20and%20Submitted%20by%20Sponsor-Investigators.pdf | Investigational New Drug Applications Prepared and Submitted by Sponsor-Investigators
+{docs}/Investigator%20Responsibilities%20-Safety%20Reporting%20for%20Investigational%20Drugs%20and%20Devices%20Guidance%20for%20Investigators%2C%20Industry%2C%20and%20Institutional%20Review%20Boards.pdf | Investigator Responsibilities -Safety Reporting for Investigational Drugs and Devices Guidance for Investigators, Industry, and Institutional Review Boards
+{docs}/Investigator%27s%20Brochure.pdf | Investigator's Brochure
+{docs}/Long-Term-Follow-Up-After-Admin-Human-GT-Products_Jan_2020.pdf | Long-Term-Follow-Up-After-Admin-Human-GT-Products_Jan_2020
+{docs}/m1.1_FORM1572_fillablePDF.pdf | m1.1_FORM1572_fillablePDF
+{docs}/M3%28R2%29%20Nonclinical%20Safety%20Studies%20for%20the%20Conduct%20of%20Human%20Clinical%20Trials%20and%20Marketing%20Authorization%20for%20Pharmaceuticals.pdf | M3(R2) Nonclinical Safety Studies for the Conduct of Human Clinical Trials and Marketing Authorization for Pharmaceuticals
+{docs}/M4E%28R2%29%20The%20CTD%20-%20Efficacy.pdf | M4E(R2) The CTD - Efficacy
+{docs}/module2.7.1-3_example_text.docx.pdf | module2.7.1-3_example_text.docx
+{docs}/Nonproprietary%20Naming%20of%20Biological%20Products.pdf | Nonproprietary Naming of Biological Products
+{docs}/ORGANISATION%20OF%20THE%20COMMON%20TECHNICAL%20DOCUMENT%20FOR%20THE%20REGISTRATION%20OF%20PHARMACEUTICALS%20FOR%20HUMAN%20USE.pdf | ORGANISATION OF THE COMMON TECHNICAL DOCUMENT FOR THE REGISTRATION OF PHARMACEUTICALS FOR HUMAN USE
+{docs}/OTAT_Gene_Therapy_CMC_Transcript_0.pdf | OTAT_Gene_Therapy_CMC_Transcript_0
+{docs}/OTP_Town_Hall_Transcript_8-30-23.pdf | OTP_Town_Hall_Transcript_8-30-23
+{docs}/Patent_Information_21_CFR_314.53.pdf | Patent_Information_21_CFR_314.53
+{docs}/PDUFA%20VII.pdf | PDUFA VII
+{docs}/Pediatric%20Information%20Incorporated%20Into%20Human%20Prescription%20Drug%20and%20Biological%20Product%20Labeling%20Guidance%20for%20Industry.pdf | Pediatric Information Incorporated Into Human Prescription Drug and Biological Product Labeling Guidance for Industry
+{docs}/Pediatric%20Research%20Equity%20Act%20of%202003.pdf | Pediatric Research Equity Act of 2003
+{docs}/Pediatric%20Study%20Plans%20%20%20Content%20of%20and%20Process%20for%20Submitting%20Initial%20Pediatric%20Study%20Plans%20and%20Amended%20Initial%20Pediatric%20Study%20Plans%20Guidance%20for%20Industry.pdf | Pediatric Study Plans   Content of and Process for Submitting Initial Pediatric Study Plans and Amended Initial Pediatric Study Plans Guidance for Industry
+{docs}/plausible-mechanism-framework-to-develop-individualized-therapies_02-23-2026.pdf | plausible-mechanism-framework-to-develop-individualized-therapies_02-23-2026
+{docs}/Portable%20Document%20Format%20%28PDF%29%20Specifications.pdf | Portable Document Format (PDF) Specifications
+{docs}/Postapproval%20Methods%20to%20Capture%20Safety%20and%20Efficacy%20Data%20for%20Cell%20and%20Gene%20Therapy%20Products.pdf | Postapproval Methods to Capture Safety and Efficacy Data for Cell and Gene Therapy Products
+{docs}/Potency%20Tests%20for%20Cellular%20and%20Gene%20Therapy%20Products.pdf | Potency Tests for Cellular and Gene Therapy Products
+{docs}/Preclinical%20Assessment%20of%20Investigational%20Cellular%20and%20Gene%20Therapy%20Products.pdf | Preclinical Assessment of Investigational Cellular and Gene Therapy Products
+{docs}/Process%20Validation%20General%20Principles%20and%20Practices.pdf | Process Validation General Principles and Practices
+{docs}/Providing%20Regulatory%20Submissions%20in%20Electronic%20and%20Non-Electronic%20Format%20-%20Promotional%20Labeling%20and%20Advertising%20Materials%20for%20Human%20Prescription%20Drugs.pdf | Providing Regulatory Submissions in Electronic and Non-Electronic Format - Promotional Labeling and Advertising Materials for Human Prescription Drugs
+{docs}/Providing%20Regulatory%20Submissions%20in%20Electronic%20Format%20-%20Certain%20Human%20Pharmaceutical%20Product%20Applications%20and%20Related%20Submissions%20Using%20the%20eCTD%20Specifications.pdf | Providing Regulatory Submissions in Electronic Format - Certain Human Pharmaceutical Product Applications and Related Submissions Using the eCTD Specifications
+{docs}/Providing%20Regulatory%20Submissions%20in%20Electronic%20Format-Standardized%20Study%20Data.pdf | Providing Regulatory Submissions in Electronic Format-Standardized Study Data
+{docs}/Q1A%28R2%29%20Stability%20Testing%20of%20New%20Drug%20Substances%20and%20Products.pdf | Q1A(R2) Stability Testing of New Drug Substances and Products
+{docs}/Q1E%20Evaluation%20of%20Stability%20Data.pdf | Q1E Evaluation of Stability Data
+{docs}/Q2B%20Validation%20of%20Analytical%20Procedures%20Methodology.pdf | Q2B Validation of Analytical Procedures Methodology
+{docs}/Q5C%20Quality%20of%20Biotechnological%20Products%20Stability%20Testing%20of%20BiotechnologicalBiological%20Products.pdf | Q5C Quality of Biotechnological Products Stability Testing of BiotechnologicalBiological Products
+{docs}/Q6B%20Specifications%20Test%20Procedures%20and%20Acceptance%20Criteria%20for%20Biotechnological%20or%20Biological%20Products.pdf | Q6B Specifications Test Procedures and Acceptance Criteria for Biotechnological or Biological Products
+{docs}/Q7%20Good%20Manufacturing%20Practice%20Guidance%20for%20Active%20Pharmaceutical%20Ingredients%20Guidance%20for%20Industry.pdf | Q7 Good Manufacturing Practice Guidance for Active Pharmaceutical Ingredients Guidance for Industry
+{docs}/Quality%20Systems%20Approach%20to%20Pharmaceutical%20CGMP%20Regulations.pdf | Quality Systems Approach to Pharmaceutical CGMP Regulations
+{docs}/Reference%20Product%20Exclusivity%20for%20Biological%20Products%20Filed%20Under%20%20Section%20351%28a%29%20of%20the%20PHS%20Act.pdf | Reference Product Exclusivity for Biological Products Filed Under  Section 351(a) of the PHS Act
+{docs}/Referencing%20Approved%20Drug%20Products%20in%20ANDA%20Submissions.pdf | Referencing Approved Drug Products in ANDA Submissions
+{docs}/REMS%20Assessment%20Planning%20and%20Reporting.pdf | REMS Assessment Planning and Reporting
+{docs}/REVISION%20OF%20M4E%20GUIDELINE%20ON%20ENHANCING%20THE%20FORMAT%20AND%20STRUCTURE%20OF%20BENEFIT-RISK%20INFORMATION%20IN%20ICH%20EFFICACY%20-%20M4E%28R2%29.pdf | REVISION OF M4E GUIDELINE ON ENHANCING THE FORMAT AND STRUCTURE OF BENEFIT-RISK INFORMATION IN ICH EFFICACY - M4E(R2)
+{docs}/Right%20to%20Try%20Act%20of%202018.pdf | Right to Try Act of 2018
+{docs}/Safety%20Assessment%20of%20Genome%20Editing%20in%20Human%20Gene%20Therapy%20Products%20Using%20Next-Generation%20Sequencing.pdf | Safety Assessment of Genome Editing in Human Gene Therapy Products Using Next-Generation Sequencing
+{docs}/Safety%20Reporting%20Requirements%20for%20INDs%20and%20BA%20or%20BE%20Studies.pdf | Safety Reporting Requirements for INDs and BA or BE Studies
+{docs}/SOPP%208005%20Formal%20Dispute%20Resolution%20Process.pdf | SOPP 8005 Formal Dispute Resolution Process
+{docs}/SOPP-8212-Breakthrough-Therapy-Products-Designation-and-Management-V8-b.pdf | SOPP-8212-Breakthrough-Therapy-Products-Designation-and-Management-V8-b
+{docs}/SOPP-8216-Fast-Track-Development-Programs-Designation-and-Management-V5.pdf | SOPP-8216-Fast-Track-Development-Programs-Designation-and-Management-V5
+{docs}/Special%20Protocol%20Assessment%20Guidance%20for%20Industry.pdf | Special Protocol Assessment Guidance for Industry
+{docs}/Specifications%20for%20File%20Format%20Types%20Using%20eCTD%20Specifications.pdf | Specifications for File Format Types Using eCTD Specifications
+{docs}/Sponsor%20Responsibilities-Safety%20Reporting%20Requirements%20and%20Safety%20Assessment%20for%20IND%20and%20BioavailabilityOrBioequivalence%20Studies.pdf | Sponsor Responsibilities-Safety Reporting Requirements and Safety Assessment for IND and BioavailabilityOrBioequivalence Studies
+{docs}/Sponsor_Responsibilities_Safety_Reporting_Requirements_and_Safety_Assessment_for_IND_and_BioavailabilityOrBioequivalence_Studies.pdf | Sponsor_Responsibilities_Safety_Reporting_Requirements_and_Safety_Assessment_for_IND_and_BioavailabilityOrBioequivalence_Studies
+{docs}/Submitting%20Debarment%20Certification%20Statements.pdf | Submitting Debarment Certification Statements
+{docs}/THE%20COMMON%20TECHNICAL%20DOCUMENT%20FOR%20THE%20REGISTRATION%20OF%20PHARMACEUTICALS%20FOR%20HUMAN%20USE%20QUALITY%20-%20M4Q%28R1%29.pdf | THE COMMON TECHNICAL DOCUMENT FOR THE REGISTRATION OF PHARMACEUTICALS FOR HUMAN USE QUALITY - M4Q(R1)
+{docs}/THE%20COMMON%20TECHNICAL%20DOCUMENT%20FOR%20THE%20REGISTRATION%20OF%20PHARMACEUTICALS%20FOR%20HUMAN%20USE%20SAFETY%20-%20M4S%28R2%29.pdf | THE COMMON TECHNICAL DOCUMENT FOR THE REGISTRATION OF PHARMACEUTICALS FOR HUMAN USE SAFETY - M4S(R2)
+{docs}/Title%2021%20Section%20355-1.pdf | Title 21 Section 355-1
+{docs}/Transcript_OTP_Town_Hall_Gene_Therapy_Rare_Diseases_Feb_2023_vFinal_0.pdf | Transcript_OTP_Town_Hall_Gene_Therapy_Rare_Diseases_Feb_2023_vFinal_0
+{docs}/Use%20of%20Bayesian%20Methodology%20in%20Clinical%20Trials%20of%20Drug%20and%20Biological%20Products.pdf | Use of Bayesian Methodology in Clinical Trials of Drug and Biological Products
+{docs}/Waivers%2C%20Exceptions%2C%20and%20Exemptions%20From%20the%20Requirements%20of%20Section%20582%20of%20the%20Federal%20Food%2C%20Drug%2C%20and%20Cosmetic%20Act.pdf | Waivers, Exceptions, and Exemptions From the Requirements of Section 582 of the Federal Food, Drug, and Cosmetic Act

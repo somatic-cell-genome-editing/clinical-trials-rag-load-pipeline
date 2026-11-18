@@ -18,18 +18,25 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +53,8 @@ public class UrlController {
     private static final Logger LOG = LoggerFactory.getLogger(UrlController.class);
     private static final String TRIAL_FILE_PREFIX = "CLINICAL TRIAL: ";
     private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("pdf", "docx", "doc", "md", "txt");
+    // Documents with less extractable text than this are skipped as scanned images
+    private static final int MIN_DOCUMENT_TEXT = 500;
 
     private final VectorStore openaiVectorStore;
     private final DocumentPreprocessor preprocessor;
@@ -54,6 +63,8 @@ public class UrlController {
     private final String embeddingDimensions;
     private final String platformBaseUrl;
     private final String pagesFile;
+    private final String documentsFile;
+    private final String documentsBaseUrl;
     private final String documentsDir;
 
     public UrlController(@Qualifier("openaiVectorStore") VectorStore openaiVectorStore,
@@ -63,6 +74,8 @@ public class UrlController {
                          @Value("${spring.ai.openai.embedding.options.dimensions:}") String embeddingDimensions,
                          @Value("${pipeline.platform-base-url:}") String platformBaseUrl,
                          @Value("${pipeline.pages-file:}") String pagesFile,
+                         @Value("${pipeline.documents-file:}") String documentsFile,
+                         @Value("${pipeline.documents-base-url:https://scge.mcw.edu/assistant/docs}") String documentsBaseUrl,
                          @Value("${pipeline.documents-dir:}") String documentsDir){
         this.openaiVectorStore = openaiVectorStore;
         this.preprocessor = preprocessor;
@@ -72,6 +85,8 @@ public class UrlController {
         this.platformBaseUrl = platformBaseUrl.isBlank() ? defaultPlatformBaseUrl() : platformBaseUrl.replaceAll("/+$", "");
         LOG.info("Trial pages are read from {}", this.platformBaseUrl);
         this.pagesFile = pagesFile;
+        this.documentsFile = documentsFile;
+        this.documentsBaseUrl = documentsBaseUrl.replaceAll("/+$", "");
         this.documentsDir = documentsDir;
     }
 
@@ -155,17 +170,18 @@ public class UrlController {
     private enum LoadResult { ADDED, UPDATED, UNCHANGED }
 
     /**
-     * Embed the public SCGE pages listed in site-pages.txt (or pipeline.pages-file) and remove
-     * pages this pipeline loaded earlier that are no longer listed. Pages are stored as
-     * "name:url" so the chatbot cites them by URL.
+     * Embed the public SCGE pages listed in site-pages.txt (or pipeline.pages-file). Pages are
+     * stored as "name:url" so the chatbot cites them by URL.
+     *
+     * @return the file names of the listed pages, or null if the list could not be read
      */
-    public void loadSitePages() {
+    public Set<String> loadSitePages() {
         List<String[]> pages;
         try {
-            pages = readPageList();
+            pages = readSourceList(pagesFile, "site-pages.txt");
         } catch (Exception e) {
             LOG.error("Could not read the page list - site pages skipped", e);
-            return;
+            return null;
         }
         LOG.info("Loading {} site pages", pages.size());
 
@@ -197,35 +213,24 @@ public class UrlController {
             }
         }
 
-        // Pages added by hand with Process URL have no content hash and are left alone
-        List<String> removed = new ArrayList<>();
-        if (!pages.isEmpty()) {
-            for (String fileName : repository.findDistinctFileNames()) {
-                if (fileName != null && fileName.contains(":http") && !listed.contains(fileName)
-                        && isLoadedByPipeline(fileName)) {
-                    repository.deleteAll(repository.findByFileName(fileName));
-                    removed.add(fileName);
-                }
-            }
-        }
-
-        LOG.info("Site pages complete. Listed: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed: {}",
-                pages.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
+        LOG.info("Site pages complete. Listed: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}",
+                pages.size(), added.size(), updated.size(), unchanged.size(), failed.size());
         LOG.info("Failed pages: {}", failed);
-        LOG.info("Removed pages: {}", removed);
+        return listed;
     }
 
     /**
-     * Lines of "URL | name"; {platform} is this server's SCGE Platform.
+     * Lines of "URL | name" from the given file, or from the classpath resource when no file is
+     * configured. {platform} is this server's SCGE Platform, {docs} is pipeline.documents-base-url.
      */
-    private List<String[]> readPageList() throws IOException {
+    private List<String[]> readSourceList(String file, String resource) throws IOException {
         List<String> lines;
-        if (pagesFile.isBlank()) {
-            try (InputStream in = new ClassPathResource("site-pages.txt").getInputStream()) {
+        if (file.isBlank()) {
+            try (InputStream in = new ClassPathResource(resource).getInputStream()) {
                 lines = new String(in.readAllBytes(), StandardCharsets.UTF_8).lines().toList();
             }
         } else {
-            lines = Files.readAllLines(Path.of(pagesFile), StandardCharsets.UTF_8);
+            lines = Files.readAllLines(Path.of(file), StandardCharsets.UTF_8);
         }
 
         String platform = platformBaseUrl + "/platform";
@@ -236,7 +241,8 @@ public class UrlController {
                 continue;
             }
             int bar = trimmed.indexOf('|');
-            String url = (bar >= 0 ? trimmed.substring(0, bar) : trimmed).trim().replace("{platform}", platform);
+            String url = (bar >= 0 ? trimmed.substring(0, bar) : trimmed).trim()
+                    .replace("{platform}", platform).replace("{docs}", documentsBaseUrl);
             String name = bar >= 0 ? trimmed.substring(bar + 1).trim() : "";
             if (name.isEmpty() || name.contains(":http")) {
                 name = url;
@@ -244,6 +250,104 @@ public class UrlController {
             pages.add(new String[]{url, name});
         }
         return pages;
+    }
+
+
+    /**
+     * Download and embed the public PDF documents listed in site-documents.txt (or
+     * pipeline.documents-file). Byte-identical files are embedded once, under the first name
+     * listed. Documents are stored as "name:url" so the chatbot cites them by URL.
+     *
+     * @return the file names of the listed documents, or null if the list could not be read
+     */
+    public Set<String> loadWebDocuments() {
+        List<String[]> documents;
+        try {
+            documents = readSourceList(documentsFile, "site-documents.txt");
+        } catch (Exception e) {
+            LOG.error("Could not read the document list - documents skipped", e);
+            return null;
+        }
+        LOG.info("Loading {} documents", documents.size());
+
+        Set<String> listed = new HashSet<>();
+        Map<String, String> firstNameByFileHash = new HashMap<>();
+        List<String> added = new ArrayList<>();
+        List<String> updated = new ArrayList<>();
+        List<String> unchanged = new ArrayList<>();
+        List<String> duplicates = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        HttpClient http = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(30))
+                .build();
+
+        for (String[] document : documents) {
+            String url = document[0];
+            String fileName = document[1] + ":" + url;
+            try {
+                HttpResponse<byte[]> response = http.send(
+                        HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(3)).GET().build(),
+                        HttpResponse.BodyHandlers.ofByteArray());
+                if (response.statusCode() != 200 || response.body().length == 0) {
+                    listed.add(fileName);   // keep what is stored until the file is back
+                    failed.add(document[1] + " (HTTP " + response.statusCode() + ")");
+                    continue;
+                }
+
+                String fileHash = HexFormat.of().formatHex(
+                        MessageDigest.getInstance("SHA-256").digest(response.body()));
+                String firstName = firstNameByFileHash.putIfAbsent(fileHash, document[1]);
+                if (firstName != null) {
+                    duplicates.add(document[1] + " = " + firstName);
+                    continue;
+                }
+                listed.add(fileName);
+
+                List<Document> chunks = buildDocumentChunks(new ByteArrayResource(response.body()), fileName);
+                if (chunks == null) {
+                    failed.add(document[1]);
+                    continue;
+                }
+                switch (replaceSource(fileName, chunks)) {
+                    case ADDED -> added.add(document[1]);
+                    case UPDATED -> updated.add(document[1]);
+                    case UNCHANGED -> unchanged.add(document[1]);
+                }
+            } catch (Exception e) {
+                listed.add(fileName);
+                failed.add(document[1]);
+                LOG.error("Exception loading document: {} (existing entries kept)", url, e);
+            }
+        }
+
+        LOG.info("Documents complete. Listed: {}, Added: {}, Updated: {}, Unchanged: {}, Duplicates skipped: {}, Failed: {}",
+                documents.size(), added.size(), updated.size(), unchanged.size(), duplicates.size(), failed.size());
+        LOG.info("Duplicate documents (embedded under the first name): {}", duplicates);
+        LOG.info("Failed documents: {}", failed);
+        return listed;
+    }
+
+    /**
+     * Remove pages and documents this pipeline loaded earlier that are no longer in either list.
+     * Skipped when a list could not be read. Pages added by hand with Process URL have no
+     * content hash and are left alone.
+     */
+    public void removeUnlistedWebSources(Set<String> listedPages, Set<String> listedDocuments) {
+        if (listedPages == null || listedDocuments == null || listedPages.isEmpty()) {
+            LOG.warn("A page or document list was not read - skipping removal of unlisted pages and documents");
+            return;
+        }
+        List<String> removed = new ArrayList<>();
+        for (String fileName : repository.findDistinctFileNames()) {
+            if (fileName != null && fileName.contains(":http")
+                    && !listedPages.contains(fileName) && !listedDocuments.contains(fileName)
+                    && isLoadedByPipeline(fileName)) {
+                repository.deleteAll(repository.findByFileName(fileName));
+                removed.add(fileName);
+            }
+        }
+        LOG.info("Removed {} pages/documents no longer listed: {}", removed.size(), removed);
     }
 
     /**
@@ -294,7 +398,7 @@ public class UrlController {
             String fileName = file.getFileName().toString();
             present.add(fileName);
             try {
-                List<Document> chunks = buildDocumentChunks(file, fileName);
+                List<Document> chunks = buildDocumentChunks(new FileSystemResource(file), fileName);
                 if (chunks == null) {
                     failed.add(fileName);
                     continue;
@@ -328,15 +432,23 @@ public class UrlController {
         LOG.info("Removed documents: {}", removed);
     }
 
-    private List<Document> buildDocumentChunks(Path file, String fileName) {
+    private List<Document> buildDocumentChunks(Resource source, String fileName) {
         try {
-            List<Document> documents = new TikaDocumentReader(new FileSystemResource(file)).get().stream()
+            List<Document> documents = new TikaDocumentReader(source).get().stream()
                     .map(doc -> {
                         Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
                         metadata.put("filename", fileName);
                         return new Document(doc.getContent(), metadata);
                     })
                     .collect(Collectors.toList());
+
+            // Scanned PDFs (page images, e.g. some redacted documents) have no text layer
+            int textLength = documents.stream().mapToInt(doc -> doc.getContent().trim().length()).sum();
+            if (textLength < MIN_DOCUMENT_TEXT) {
+                LOG.warn("Document has almost no extractable text ({} chars) - probably a scanned PDF, skipped: {}",
+                        textLength, fileName);
+                return null;
+            }
 
             // Same quality filter as uploads through the chat app
             List<Document> chunks = splitAndLabel(documents).stream()

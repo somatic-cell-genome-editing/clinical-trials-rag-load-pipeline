@@ -9,6 +9,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.util.Set;
+
 @SpringBootApplication
 public class ClinicalTrialsUpdatePipeline implements CommandLineRunner {
     private static final Logger LOG = LoggerFactory.getLogger(ClinicalTrialsUpdatePipeline.class);
@@ -31,7 +33,9 @@ public class ClinicalTrialsUpdatePipeline implements CommandLineRunner {
 
             // Clinical trials, then public SCGE pages and documents; each part logs its own failures
             urlController.loadClinicalTrials();
-            urlController.loadSitePages();
+            Set<String> pages = urlController.loadSitePages();
+            Set<String> documents = urlController.loadWebDocuments();
+            urlController.removeUnlistedWebSources(pages, documents);
             urlController.loadDocuments();
 
             long endTime = System.currentTimeMillis();
