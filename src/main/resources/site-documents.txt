@@ -1,7 +1,8 @@
 # Public PDF documents embedded for the chatbot by clinical-trials-rag-load-pipeline.
 # One document per line: URL | name shown as the source in chatbot answers.
-# {docs} is pipeline.documents-base-url (default https://scge.mcw.edu/assistant/docs, the only
-# place these files are published); {platform} is this server's SCGE Platform.
+# {docs} is this server's /assistant/docs folder (stage.scge.mcw.edu on stage; scge.mcw.edu on
+# dev, which has none) and {platform} this server's SCGE Platform. Stored links use
+# pipeline.public-base-url (production links on stage, whose data is copied to production).
 # Byte-identical files are embedded once, under the first name listed. Documents removed from
 # this list are removed from the embeddings on the next run.
 # Override the whole list with pipeline.documents-file=/path/to/file in application.properties.

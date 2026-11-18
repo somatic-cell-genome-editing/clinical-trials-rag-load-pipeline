@@ -69,6 +69,8 @@ public class UrlController {
     private final String pagesFile;
     private final String documentsFile;
     private final String documentsBaseUrl;
+    // Host written into stored source links; stage data is copied to production, so stage links to production
+    private final String publicBaseUrl;
     private final String documentsDir;
 
     public UrlController(@Qualifier("openaiVectorStore") VectorStore openaiVectorStore,
@@ -79,32 +81,61 @@ public class UrlController {
                          @Value("${pipeline.platform-base-url:}") String platformBaseUrl,
                          @Value("${pipeline.pages-file:}") String pagesFile,
                          @Value("${pipeline.documents-file:}") String documentsFile,
-                         @Value("${pipeline.documents-base-url:https://scge.mcw.edu/assistant/docs}") String documentsBaseUrl,
+                         @Value("${pipeline.documents-base-url:}") String documentsBaseUrl,
+                         @Value("${pipeline.public-base-url:}") String publicBaseUrl,
                          @Value("${pipeline.documents-dir:}") String documentsDir){
         this.openaiVectorStore = openaiVectorStore;
         this.preprocessor = preprocessor;
         this.repository = repository;
         this.embeddingModelName = embeddingModelName;
         this.embeddingDimensions = embeddingDimensions;
-        this.platformBaseUrl = platformBaseUrl.isBlank() ? defaultPlatformBaseUrl() : platformBaseUrl.replaceAll("/+$", "");
-        LOG.info("SCGE Platform pages are read from {}", this.platformBaseUrl);
+        ServerSites defaults = ServerSites.forThisServer();
+        this.platformBaseUrl = setting(platformBaseUrl, defaults == null ? null : defaults.platform, "pipeline.platform-base-url");
+        this.documentsBaseUrl = setting(documentsBaseUrl, defaults == null ? null : defaults.documents, "pipeline.documents-base-url");
+        this.publicBaseUrl = setting(publicBaseUrl, defaults == null ? null : defaults.publicSite, "pipeline.public-base-url");
+        LOG.info("Server: {}. SCGE Platform pages are read from {}, documents from {}; stored links use {}",
+                defaults == null ? "unknown (explicit settings)" : defaults.name,
+                this.platformBaseUrl, this.documentsBaseUrl, this.publicBaseUrl);
         this.pagesFile = pagesFile;
         this.documentsFile = documentsFile;
-        this.documentsBaseUrl = documentsBaseUrl.replaceAll("/+$", "");
         this.documentsDir = documentsDir;
     }
 
     /**
-     * SCGE site whose platform pages are embedded: production on the production server,
-     * otherwise dev. Never stage. Override with pipeline.platform-base-url.
+     * Sites each SCGE server reads from and links to. Dev is only for development; the pipeline
+     * runs on stage, whose data is copied to production, so stage reads stage and stores
+     * production links. Any other machine must set all three pipeline.*-base-url settings.
      */
-    private static String defaultPlatformBaseUrl() {
-        try {
-            return SCGEContext.isProduction() ? "https://scge.mcw.edu" : "https://dev.scge.mcw.edu";
-        } catch (Exception e) {
-            LOG.warn("Could not determine server - using dev site for trial pages", e);
-            return "https://dev.scge.mcw.edu";
+    private record ServerSites(String name, String platform, String documents, String publicSite) {
+        static ServerSites forThisServer() {
+            try {
+                if (SCGEContext.isProduction()) {
+                    return new ServerSites("production", "https://scge.mcw.edu",
+                            "https://scge.mcw.edu/assistant/docs", "https://scge.mcw.edu");
+                }
+                if (SCGEContext.isTest()) {
+                    return new ServerSites("stage", "https://stage.scge.mcw.edu",
+                            "https://stage.scge.mcw.edu/assistant/docs", "https://scge.mcw.edu");
+                }
+                if (SCGEContext.isDev()) {
+                    // dev has no /assistant/docs folder
+                    return new ServerSites("dev", "https://dev.scge.mcw.edu",
+                            "https://scge.mcw.edu/assistant/docs", "https://dev.scge.mcw.edu");
+                }
+            } catch (Exception e) {
+                LOG.warn("Could not determine which SCGE server this is", e);
+            }
+            return null;
         }
+    }
+
+    private static String setting(String configured, String serverDefault, String property) {
+        String value = configured.isBlank() ? serverDefault : configured;
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Unknown server: set " + property
+                    + " (and the other pipeline.*-base-url settings) in application.properties");
+        }
+        return value.replaceAll("/+$", "");
     }
 
     public void loadClinicalTrials() {
@@ -216,7 +247,7 @@ public class UrlController {
 
         for (String[] page : pages) {
             String url = page[0];
-            String fileName = page[1] + ":" + url;
+            String fileName = page[1] + ":" + page[2];
             listed.add(fileName);
             try {
                 List<Document> chunks = buildChunks(url, fileName);
@@ -244,7 +275,9 @@ public class UrlController {
 
     /**
      * Lines of "URL | name" from the given file, or from the classpath resource when no file is
-     * configured. {platform} is this server's SCGE Platform, {docs} is pipeline.documents-base-url.
+     * configured. Returns {URL to read, name, link to store}: {platform} and {docs} are read from
+     * this server's sites (pipeline.platform-base-url, pipeline.documents-base-url) and linked on
+     * pipeline.public-base-url.
      */
     private List<String[]> readSourceList(String file, String resource) throws IOException {
         List<String> lines;
@@ -257,6 +290,8 @@ public class UrlController {
         }
 
         String platform = platformBaseUrl + "/platform";
+        String publicPlatform = publicBaseUrl + "/platform";
+        String publicDocs = publicBaseUrl + "/assistant/docs";
         List<String[]> pages = new ArrayList<>();
         for (String line : lines) {
             String trimmed = line.trim();
@@ -264,13 +299,15 @@ public class UrlController {
                 continue;
             }
             int bar = trimmed.indexOf('|');
-            String url = (bar >= 0 ? trimmed.substring(0, bar) : trimmed).trim()
-                    .replace("{platform}", platform).replace("{docs}", documentsBaseUrl);
+            String entry = (bar >= 0 ? trimmed.substring(0, bar) : trimmed).trim();
+            String url = entry.replace("{platform}", platform).replace("{docs}", documentsBaseUrl);
+            // Link stored with the source (what the chatbot shows), e.g. production links on stage
+            String link = entry.replace("{platform}", publicPlatform).replace("{docs}", publicDocs);
             String name = bar >= 0 ? trimmed.substring(bar + 1).trim() : "";
             if (name.isEmpty() || name.contains(":http")) {
-                name = url;
+                name = link;
             }
-            pages.add(new String[]{url, name});
+            pages.add(new String[]{url, name, link});
         }
         return pages;
     }
@@ -307,7 +344,7 @@ public class UrlController {
 
         for (String[] document : documents) {
             String url = document[0];
-            String fileName = document[1] + ":" + url;
+            String fileName = document[1] + ":" + document[2];
             try {
                 HttpResponse<byte[]> response = http.send(
                         HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(3)).GET().build(),

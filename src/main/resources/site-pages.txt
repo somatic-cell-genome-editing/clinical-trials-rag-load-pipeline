@@ -1,7 +1,8 @@
 # Public SCGE pages embedded for the chatbot by clinical-trials-rag-load-pipeline.
 # One page per line: URL | name shown as the source in chatbot answers.
-# {platform} is the SCGE Platform of this server (dev.scge.mcw.edu/platform on dev,
-# scge.mcw.edu/platform on production). Only public pages - nothing behind the login.
+# {platform} is read from this server's SCGE Platform (stage.scge.mcw.edu on stage,
+# dev.scge.mcw.edu on dev) and linked on pipeline.public-base-url (production links on stage,
+# whose data is copied to production). Only public pages - nothing behind the login.
 # Pages removed from this list are removed from the embeddings on the next run.
 # Override the whole list with pipeline.pages-file=/path/to/file in application.properties.
 
