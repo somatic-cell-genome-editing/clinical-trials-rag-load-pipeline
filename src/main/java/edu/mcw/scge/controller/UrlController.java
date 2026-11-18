@@ -1,8 +1,11 @@
 package edu.mcw.scge.controller;
 
+import edu.mcw.scge.datamodel.Alias;
+import edu.mcw.scge.datamodel.ClinicalTrialAdditionalInfo;
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.reader.UrlDocumentReader;
 import edu.mcw.scge.service.TrialSummaryBuilder;
+import edu.mcw.scge.service.TrialTextBuilder;
 import edu.mcw.scge.service.ChunkLabeler;
 import edu.mcw.scge.service.DocumentPreprocessor;
 import edu.mcw.scge.services.SCGEContext;
@@ -43,6 +46,7 @@ import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -83,7 +87,7 @@ public class UrlController {
         this.embeddingModelName = embeddingModelName;
         this.embeddingDimensions = embeddingDimensions;
         this.platformBaseUrl = platformBaseUrl.isBlank() ? defaultPlatformBaseUrl() : platformBaseUrl.replaceAll("/+$", "");
-        LOG.info("Trial pages are read from {}", this.platformBaseUrl);
+        LOG.info("SCGE Platform pages are read from {}", this.platformBaseUrl);
         this.pagesFile = pagesFile;
         this.documentsFile = documentsFile;
         this.documentsBaseUrl = documentsBaseUrl.replaceAll("/+$", "");
@@ -91,7 +95,7 @@ public class UrlController {
     }
 
     /**
-     * SCGE site whose trial pages are embedded: production on the production server,
+     * SCGE site whose platform pages are embedded: production on the production server,
      * otherwise dev. Never stage. Override with pipeline.platform-base-url.
      */
     private static String defaultPlatformBaseUrl() {
@@ -123,6 +127,14 @@ public class UrlController {
                 trialIds.add(nctId.trim());
             }
 
+            // Trial text is built from the database records, not the report web page
+            Map<String, ClinicalTrialRecord> records = new HashMap<>();
+            for (ClinicalTrialRecord record : dao.getAllClinicalTrailRecords()) {
+                if (record.getNctId() != null && trialIds.contains(record.getNctId().trim())) {
+                    records.put(record.getNctId().trim(), record.formatRecordValue(record));
+                }
+            }
+
             List<String> added = new ArrayList<>();
             List<String> updated = new ArrayList<>();
             List<String> unchanged = new ArrayList<>();
@@ -130,15 +142,25 @@ public class UrlController {
 
             for (String nctId : trialIds) {
                 try {
-                    String url = platformBaseUrl + "/platform/data/report/clinicalTrials/" + nctId;
                     LOG.info("Processing trial: {}", nctId);
-
-                    List<Document> chunks = buildChunks(url, TRIAL_FILE_PREFIX + nctId);
-                    if (chunks == null) {
+                    ClinicalTrialRecord record = records.get(nctId);
+                    if (record == null) {
                         failed.add(nctId);
-                        LOG.error("Failed to process trial: {} (existing entries kept)", nctId);
+                        LOG.error("No record found for trial: {} (existing entries kept)", nctId);
                         continue;
                     }
+
+                    List<String> aliases = dao.getAliases(nctId, "compound").stream()
+                            .map(Alias::getAlias).filter(Objects::nonNull).collect(Collectors.toList());
+                    List<String> fdaDesignations = dao.getAdditionalInfo(nctId, "fda_designation").stream()
+                            .map(ClinicalTrialAdditionalInfo::getPropertyValue).filter(Objects::nonNull)
+                            .collect(Collectors.toList());
+                    String text = TrialTextBuilder.build(record, aliases, fdaDesignations,
+                            dao.getExtLinksByNctIdSorted(nctId));
+
+                    Map<String, Object> metadata = new HashMap<>();
+                    metadata.put("filename", TRIAL_FILE_PREFIX + nctId);
+                    List<Document> chunks = splitAndLabel(List.of(new Document(text, metadata)));
 
                     switch (replaceSource(TRIAL_FILE_PREFIX + nctId, chunks)) {
                         case ADDED -> added.add(nctId);
@@ -153,7 +175,7 @@ public class UrlController {
             }
 
             List<String> removed = removeDeletedTrials(trialIds);
-            loadTrialSummary(dao, trialIds);
+            loadTrialSummary(new ArrayList<>(records.values()));
 
             LOG.info("Clinical trials processing complete. Active trials: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed (no longer Active): {}",
                     trialIds.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
@@ -626,12 +648,8 @@ public class UrlController {
     /**
      * Load the trial summary documents and remove summary documents no longer generated.
      */
-    private void loadTrialSummary(ClinicalTrailDAO dao, Set<String> trialIds) {
+    private void loadTrialSummary(List<ClinicalTrialRecord> trials) {
         try {
-            List<ClinicalTrialRecord> trials = dao.getAllClinicalTrailRecords().stream()
-                    .filter(r -> r.getNctId() != null && trialIds.contains(r.getNctId().trim()))
-                    .collect(Collectors.toList());
-
             Map<String, String> summaries = TrialSummaryBuilder.build(trials);
             LOG.info("Built {} trial summary documents from {} trials", summaries.size(), trials.size());
 
