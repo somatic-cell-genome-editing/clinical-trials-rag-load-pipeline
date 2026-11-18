@@ -11,18 +11,21 @@ import java.util.TreeMap;
 import java.util.function.Function;
 
 /**
- * Builds summary documents listing the Active trials grouped by phase, status, modality,
- * delivery system, vector, editor and route. Individual trial pages cannot answer questions
+ * Builds summary documents listing the tracked trials grouped by record status, phase,
+ * recruitment status, modality, delivery system, vector, editor and route. Individual trial pages cannot answer questions
  * across many trials ("which recruiting trials use AAV?") because the chatbot only sees the
  * closest chunks; one document per group puts the whole answer in a few chunks.
  */
-public final class ActiveTrialSummaryBuilder {
+public final class TrialSummaryBuilder {
 
-    public static final String FILE_NAME_PREFIX = "ACTIVE TRIAL SUMMARY: ";
+    public static final String FILE_NAME_PREFIX = "TRIAL SUMMARY: ";
+    // Prefix used when only Active trials were summarized; documents with it are removed
+    public static final String OLD_FILE_NAME_PREFIX = "ACTIVE TRIAL SUMMARY: ";
 
     private record Dimension(String label, Function<ClinicalTrialRecord, String> field) {}
 
     private static final List<Dimension> DIMENSIONS = List.of(
+            new Dimension("Record Status", ClinicalTrialRecord::getRecordStatus),
             new Dimension("Phase", ClinicalTrialRecord::getPhase),
             new Dimension("Recruitment Status", ClinicalTrialRecord::getStudyStatus),
             new Dimension("Therapeutic Modality", ClinicalTrialRecord::getTherapyType),
@@ -35,19 +38,19 @@ public final class ActiveTrialSummaryBuilder {
     // Longest group value used in a file name (file_name column is varchar(255))
     private static final int MAX_VALUE_IN_FILE_NAME = 150;
 
-    private ActiveTrialSummaryBuilder() {}
+    private TrialSummaryBuilder() {}
 
     /**
      * @return file name -> document text, in a stable order
      */
-    public static Map<String, String> build(List<ClinicalTrialRecord> activeTrials) {
-        List<ClinicalTrialRecord> trials = new ArrayList<>(activeTrials);
+    public static Map<String, String> build(List<ClinicalTrialRecord> allTrials) {
+        List<ClinicalTrialRecord> trials = new ArrayList<>(allTrials);
         trials.sort(Comparator.comparing(ClinicalTrialRecord::getNctId));
 
         Map<String, String> documents = new LinkedHashMap<>();
         StringBuilder overview = new StringBuilder();
-        overview.append("Overview of the Active clinical trials tracked by the SCGE Platform Gene Therapy Trial Browser.\n");
-        overview.append("Total Active trials: ").append(trials.size()).append("\n");
+        overview.append("Overview of the clinical trials tracked by the SCGE Platform Gene Therapy Trial Browser.\n");
+        overview.append("Total trials: ").append(trials.size()).append("\n");
 
         for (Dimension dimension : DIMENSIONS) {
             // Group value (case-insensitive) -> trials; a trial with several values appears in each group
@@ -63,7 +66,7 @@ public final class ActiveTrialSummaryBuilder {
                 }
             }
 
-            overview.append("\nActive trials by ").append(dimension.label()).append(":\n");
+            overview.append("\nTrials by ").append(dimension.label()).append(":\n");
             for (Map.Entry<String, List<ClinicalTrialRecord>> group : groups.entrySet()) {
                 overview.append("- ").append(group.getKey()).append(": ")
                         .append(group.getValue().size()).append(" trials\n");
@@ -77,7 +80,7 @@ public final class ActiveTrialSummaryBuilder {
                 String fileValue = value.length() > MAX_VALUE_IN_FILE_NAME
                         ? value.substring(0, MAX_VALUE_IN_FILE_NAME) : value;
                 StringBuilder text = new StringBuilder();
-                text.append("Active clinical trials tracked by the SCGE Platform where ")
+                text.append("Clinical trials tracked by the SCGE Platform where ")
                         .append(dimension.label()).append(" is ").append(value)
                         .append(" (").append(group.getValue().size()).append(" trials):\n");
                 for (ClinicalTrialRecord trial : group.getValue()) {
@@ -100,6 +103,7 @@ public final class ActiveTrialSummaryBuilder {
     private static String trialLine(ClinicalTrialRecord trial) {
         StringBuilder line = new StringBuilder("- ").append(trial.getNctId());
         appendField(line, ": ", trial.getBriefTitle());
+        appendField(line, " | Record status: ", trial.getRecordStatus());
         appendField(line, " | Indication: ", trial.getIndication());
         appendField(line, " | Phase: ", trial.getPhase());
         appendField(line, " | Recruitment status: ", trial.getStudyStatus());

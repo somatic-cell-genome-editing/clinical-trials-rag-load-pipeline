@@ -2,7 +2,7 @@ package edu.mcw.scge.controller;
 
 import edu.mcw.scge.datamodel.ClinicalTrialRecord;
 import edu.mcw.scge.reader.UrlDocumentReader;
-import edu.mcw.scge.service.ActiveTrialSummaryBuilder;
+import edu.mcw.scge.service.TrialSummaryBuilder;
 import edu.mcw.scge.service.ChunkLabeler;
 import edu.mcw.scge.service.DocumentPreprocessor;
 import edu.mcw.scge.services.SCGEContext;
@@ -81,16 +81,16 @@ public class UrlController {
             // Get NCT IDs from the platform database of this server (scgeplatformDataSource in default_db.xml)
             DataSource platformDS = DataSourceFactory.getInstance().getScgePlatformDataSource();
             ClinicalTrailDAO dao = new ClinicalTrailDAO(platformDS);
-            List<String> nctIds = dao.getNctIdsByRecordStatus("Active");
-            LOG.info("Retrieved {} Active NCT IDs from scgeplatform database", nctIds.size());
+            List<String> nctIds = dao.getAllNctIds();
+            LOG.info("Retrieved {} NCT IDs from scgeplatform database", nctIds.size());
 
-            Set<String> activeIds = new TreeSet<>();
+            Set<String> trialIds = new TreeSet<>();
             for (String nctId : nctIds) {
                 if (nctId == null || nctId.trim().isEmpty()) {
                     LOG.warn("Skipping empty nctId");
                     continue;
                 }
-                activeIds.add(nctId.trim());
+                trialIds.add(nctId.trim());
             }
 
             List<String> added = new ArrayList<>();
@@ -98,7 +98,7 @@ public class UrlController {
             List<String> unchanged = new ArrayList<>();
             List<String> failed = new ArrayList<>();
 
-            for (String nctId : activeIds) {
+            for (String nctId : trialIds) {
                 try {
                     String url = platformBaseUrl + "/platform/data/report/clinicalTrials/" + nctId;
                     LOG.info("Processing trial: {}", nctId);
@@ -122,11 +122,11 @@ public class UrlController {
                 }
             }
 
-            List<String> removed = removeInactiveTrials(activeIds);
-            loadActiveTrialSummary(dao, activeIds);
+            List<String> removed = removeDeletedTrials(trialIds);
+            loadTrialSummary(dao, trialIds);
 
-            LOG.info("Clinical trials processing complete. Active: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed (no longer Active): {}",
-                    activeIds.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
+            LOG.info("Clinical trials processing complete. Trials: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed (no longer in database): {}",
+                    trialIds.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
             LOG.info("Added trials: {}", added);
             LOG.info("Updated trials: {}", updated);
             LOG.info("Failed trials: {}", failed);
@@ -254,12 +254,12 @@ public class UrlController {
     }
 
     /**
-     * Delete stored trials that are no longer Active (only Active trials belong in the chatbot).
+     * Delete stored trials that are no longer in the platform database.
      */
-    private List<String> removeInactiveTrials(Set<String> activeIds) {
+    private List<String> removeDeletedTrials(Set<String> trialIds) {
         List<String> removed = new ArrayList<>();
-        if (activeIds.isEmpty()) {
-            LOG.warn("No Active trials returned - skipping removal of inactive trials");
+        if (trialIds.isEmpty()) {
+            LOG.warn("No trials returned - skipping removal of deleted trials");
             return removed;
         }
 
@@ -268,27 +268,27 @@ public class UrlController {
                 continue;
             }
             String nctId = fileName.substring(TRIAL_FILE_PREFIX.length()).trim();
-            if (!activeIds.contains(nctId)) {
+            if (!trialIds.contains(nctId)) {
                 List<DocumentEmbeddingOpenAI> rows = repository.findByFileName(fileName);
                 repository.deleteAll(rows);
                 removed.add(nctId);
-                LOG.info("Removed trial no longer Active: {} ({} chunks)", nctId, rows.size());
+                LOG.info("Removed trial no longer in database: {} ({} chunks)", nctId, rows.size());
             }
         }
         return removed;
     }
 
     /**
-     * Load the Active trial summary documents and remove summary documents no longer generated.
+     * Load the trial summary documents and remove summary documents no longer generated.
      */
-    private void loadActiveTrialSummary(ClinicalTrailDAO dao, Set<String> activeIds) {
+    private void loadTrialSummary(ClinicalTrailDAO dao, Set<String> trialIds) {
         try {
-            List<ClinicalTrialRecord> activeTrials = dao.getAllClinicalTrailRecords().stream()
-                    .filter(r -> r.getNctId() != null && activeIds.contains(r.getNctId().trim()))
+            List<ClinicalTrialRecord> trials = dao.getAllClinicalTrailRecords().stream()
+                    .filter(r -> r.getNctId() != null && trialIds.contains(r.getNctId().trim()))
                     .collect(Collectors.toList());
 
-            Map<String, String> summaries = ActiveTrialSummaryBuilder.build(activeTrials);
-            LOG.info("Built {} Active trial summary documents from {} trials", summaries.size(), activeTrials.size());
+            Map<String, String> summaries = TrialSummaryBuilder.build(trials);
+            LOG.info("Built {} trial summary documents from {} trials", summaries.size(), trials.size());
 
             int changed = 0;
             for (Map.Entry<String, String> summary : summaries.entrySet()) {
@@ -302,18 +302,20 @@ public class UrlController {
 
             int removed = 0;
             for (String fileName : repository.findDistinctFileNames()) {
-                if (fileName != null && fileName.startsWith(ActiveTrialSummaryBuilder.FILE_NAME_PREFIX)
-                        && !summaries.containsKey(fileName)) {
+                boolean isSummary = fileName != null
+                        && (fileName.startsWith(TrialSummaryBuilder.FILE_NAME_PREFIX)
+                            || fileName.startsWith(TrialSummaryBuilder.OLD_FILE_NAME_PREFIX));
+                if (isSummary && !summaries.containsKey(fileName)) {
                     repository.deleteAll(repository.findByFileName(fileName));
                     removed++;
                 }
             }
-            LOG.info("Active trial summary: {} documents added or updated, {} unchanged, {} removed",
+            LOG.info("Trial summary: {} documents added or updated, {} unchanged, {} removed",
                     changed, summaries.size() - changed, removed);
 
         } catch (Exception e) {
             // Trial pages are already loaded; a summary failure should not fail the run
-            LOG.error("Failed to load Active trial summary documents", e);
+            LOG.error("Failed to load trial summary documents", e);
         }
     }
 
