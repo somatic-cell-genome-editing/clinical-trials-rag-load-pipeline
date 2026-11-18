@@ -11,7 +11,7 @@ import java.util.TreeMap;
 import java.util.function.Function;
 
 /**
- * Builds summary documents listing the tracked trials grouped by record status, phase,
+ * Builds summary documents listing the Active (published) trials grouped by phase,
  * recruitment status, modality, delivery system, vector, editor and route. Individual trial pages cannot answer questions
  * across many trials ("which recruiting trials use AAV?") because the chatbot only sees the
  * closest chunks; one document per group puts the whole answer in a few chunks.
@@ -19,13 +19,12 @@ import java.util.function.Function;
 public final class TrialSummaryBuilder {
 
     public static final String FILE_NAME_PREFIX = "TRIAL SUMMARY: ";
-    // Prefix used when only Active trials were summarized; documents with it are removed
+    // Older prefix of these documents; documents with it are removed
     public static final String OLD_FILE_NAME_PREFIX = "ACTIVE TRIAL SUMMARY: ";
 
     private record Dimension(String label, Function<ClinicalTrialRecord, String> field) {}
 
     private static final List<Dimension> DIMENSIONS = List.of(
-            new Dimension("Record Status", ClinicalTrialRecord::getRecordStatus),
             new Dimension("Phase", ClinicalTrialRecord::getPhase),
             new Dimension("Recruitment Status", ClinicalTrialRecord::getStudyStatus),
             new Dimension("Therapeutic Modality", ClinicalTrialRecord::getTherapyType),
@@ -103,7 +102,6 @@ public final class TrialSummaryBuilder {
     private static String trialLine(ClinicalTrialRecord trial) {
         StringBuilder line = new StringBuilder("- ").append(trial.getNctId());
         appendField(line, ": ", trial.getBriefTitle());
-        appendField(line, " | Record status: ", trial.getRecordStatus());
         appendField(line, " | Indication: ", trial.getIndication());
         appendField(line, " | Phase: ", trial.getPhase());
         appendField(line, " | Recruitment status: ", trial.getStudyStatus());

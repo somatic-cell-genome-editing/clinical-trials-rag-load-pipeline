@@ -110,8 +110,9 @@ public class UrlController {
             // Get NCT IDs from the platform database of this server (scgeplatformDataSource in default_db.xml)
             DataSource platformDS = DataSourceFactory.getInstance().getScgePlatformDataSource();
             ClinicalTrailDAO dao = new ClinicalTrailDAO(platformDS);
-            List<String> nctIds = dao.getAllNctIds();
-            LOG.info("Retrieved {} NCT IDs from scgeplatform database", nctIds.size());
+            // Only Active records are published in the SCGE Trial Browser
+            List<String> nctIds = dao.getNctIdsByRecordStatus("Active");
+            LOG.info("Retrieved {} Active NCT IDs from scgeplatform database", nctIds.size());
 
             Set<String> trialIds = new TreeSet<>();
             for (String nctId : nctIds) {
@@ -154,7 +155,7 @@ public class UrlController {
             List<String> removed = removeDeletedTrials(trialIds);
             loadTrialSummary(dao, trialIds);
 
-            LOG.info("Clinical trials processing complete. Trials: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed (no longer in database): {}",
+            LOG.info("Clinical trials processing complete. Active trials: {}, Added: {}, Updated: {}, Unchanged: {}, Failed: {}, Removed (no longer Active): {}",
                     trialIds.size(), added.size(), updated.size(), unchanged.size(), failed.size(), removed.size());
             LOG.info("Added trials: {}", added);
             LOG.info("Updated trials: {}", updated);
@@ -598,12 +599,12 @@ public class UrlController {
     }
 
     /**
-     * Delete stored trials that are no longer in the platform database.
+     * Delete stored trials that are no longer Active (only Active trials are published).
      */
     private List<String> removeDeletedTrials(Set<String> trialIds) {
         List<String> removed = new ArrayList<>();
         if (trialIds.isEmpty()) {
-            LOG.warn("No trials returned - skipping removal of deleted trials");
+            LOG.warn("No Active trials returned - skipping removal of trials that are no longer Active");
             return removed;
         }
 
@@ -616,7 +617,7 @@ public class UrlController {
                 List<DocumentEmbeddingOpenAI> rows = repository.findByFileName(fileName);
                 repository.deleteAll(rows);
                 removed.add(nctId);
-                LOG.info("Removed trial no longer in database: {} ({} chunks)", nctId, rows.size());
+                LOG.info("Removed trial no longer Active: {} ({} chunks)", nctId, rows.size());
             }
         }
         return removed;
